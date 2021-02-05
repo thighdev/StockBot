@@ -3,31 +3,7 @@ import os
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
 
-"""
-Done
-endpoint- stock/get-news:
-Define a function getNews(ticker, region) which returns the urls of the most recent news on the ticker provided.
-json: item key to results (json inside a list) to key 'link' for url for news.
 
-endpoint - stock/get-detail
-Define a function getDetails(ticker, region) which returns the following:
-current market price, opening market price, day-high price, day-low price, dividend yield, % change
-dictionary keys from: price -> regularMarketOpen -> raw, price -> regularMarketPrice -> raw,
-price -> regularMarketDayLow -> raw, price -> regularMarketDayHigh -> raw,
-summaryDetail -> trailingAnnualDividendYield -> fmt, summaryDetail -> trailingAnnualDividendRate -> fmt
-summaryDetail -> exDividendDate -> fmt, price -> regularMarketChangePercent -> fmt
-
-endpoint - market/v2/getmovers 
-getMovers()
-Define a function getMovers() that returns the top gainers. top losers and top volume in US.
-
-TODO:
-
-endpoint - market/v2/get-quotes
-getQuotes(*args, region)
-Define a function that takes in multiple tickers and the region its in and return all those market details about 
-the ticker provided.
-"""
 suffixes = ['.V', '.TO', '.NE']
 load_dotenv()
 token = os.getenv("RAPID-API-KEY")
