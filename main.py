@@ -7,9 +7,6 @@ import asyncio
 bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
 token = os.getenv("TOKEN")
 
-testing1 = {}
-testing2 = {}
-
 
 @bot.command(
     help="Requires no arguments, just checks for the top gainers, losses and volume in the US. e.g. !movers",
@@ -145,6 +142,7 @@ async def live_error(ctx, error):
         await ctx.send('Came across an error while processing your request. '
                        'Check if your region corresponds to the proper exchange, '
                        'or re-check the ticker you used.')
+
 
 @alertsell.error
 async def alertsell_error(ctx, error):
