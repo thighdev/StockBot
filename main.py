@@ -101,26 +101,23 @@ async def live(ctx, arg1, *args):
 
 @bot.command(
     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
-    brief="Directly messages the user when the price hits the threshold indicated so they can buy."
+    brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
 )
-async def alertbuy(ctx, ticker, price):
-    while True:
-        if float(get_live_price(ticker)) <= float(price):
-            await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```" )
-            break
-        await asyncio.sleep(15)
+async def alert(ctx, ticker, price):
+    if float(live_stock_price(ticker) > float(price)):
+        while True:
+            print(live_stock_price(ticker))
+            if float(live_stock_price(ticker)) <= float(price):
+                await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```" )
+                break
+            await asyncio.sleep(10)
+    else:
+        while True:
+            if float(live_stock_price(ticker)) >= float(price):
+                await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```")
+                break
+            await asyncio.sleep(10)
 
-
-@bot.command(
-    help="Requires two arguments, ticker and price. Example !alert TSLA 800",
-    brief="Directly messages the user when the price hits the threshold indicated so they can sell."
-)
-async def alertsell(ctx, ticker, price):
-    while True:
-        if float(get_live_price(ticker)) >= float(price):
-            await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```" )
-            break
-        await asyncio.sleep(15)
 
 @info.error
 async def info_error(ctx, error):
@@ -145,14 +142,7 @@ async def live_error(ctx, error):
 
 
 @alertsell.error
-async def alertsell_error(ctx, error):
-    if isinstance(error, commands.CommandError):
-        await ctx.send('Came across an error while processing your request. '
-                       'Please check your ticker again.')
-
-
-@alertbuy.error
-async def alertbuy_error(ctx, error):
+async def alert_error(ctx, error):
     if isinstance(error, commands.CommandError):
         await ctx.send('Came across an error while processing your request. '
                        'Please check your ticker again.')

@@ -45,7 +45,7 @@ def getMovers():
     # Hash the symbols by the keys (which will be indicated by the rank)
     top_gainers = data['finance']['result'][0]['quotes']
     symbols_top_gainers = {}
-    print(top_gainers[0]['symbol'])
+    #print(top_gainers[0]['symbol'])
     for i in range(0, 6):
         symbols_top_gainers[i + 1] = top_gainers[i]['symbol']
 
