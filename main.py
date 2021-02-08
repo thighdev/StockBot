@@ -108,13 +108,13 @@ async def alert(ctx, ticker, price):
         while True:
             print(live_stock_price(ticker))
             if float(live_stock_price(ticker)) <= float(price):
-                await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```" )
+                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```" )
                 break
             await asyncio.sleep(10)
     else:
         while True:
             if float(live_stock_price(ticker)) >= float(price):
-                await ctx.author.send("```" + ticker + " has hit your price point of $" + price + ".```")
+                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
                 break
             await asyncio.sleep(10)
 
@@ -141,7 +141,7 @@ async def live_error(ctx, error):
                        'or re-check the ticker you used.')
 
 
-@alertsell.error
+@alert.error
 async def alert_error(ctx, error):
     if isinstance(error, commands.CommandError):
         await ctx.send('Came across an error while processing your request. '
