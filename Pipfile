@@ -8,6 +8,11 @@ discord = "*"
 discord-pretty-help = "*"
 python-dotenv = "*"
 yahoo-fin = "*"
+invoke = "*"
+requests = "*"
+datetime = "*"
+pandas = "*"
+requests-html = "*"
 
 [dev-packages]
 

@@ -1,0 +1,38 @@
+version: '3.1'
+
+networks:
+  stockbotnet:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.18.1.0/24
+          ip_range: 172.18.1.0/24
+          gateway: 172.18.1.1
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    networks:
+      stockbotnet:
+        ipv4_address: 172.18.1.3
+        aliases:
+          - tpm-mysql
+
+  stockbot:
+    container_name: stockbot
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    depends_on:
+      mysql:
+        condition: service_started
+    volumes:
+      - "../:/apps/stockbot:Z"
+    build:
+      context: ../
+      dockerfile: docker/stockbot.dockerfile
