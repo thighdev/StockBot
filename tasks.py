@@ -50,4 +50,4 @@ def runbot(c):
     """
     Runs the bot
     """
-    compose(c, "exec stockbot python /apps/stockbot/main.py")
+    compose(c, "exec stockbot python /apps/stockbot/stockbot.py")

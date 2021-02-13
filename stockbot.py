@@ -1,8 +1,9 @@
 import discord
-from functions import *
+from src.functions import *
 from discord.ext import commands
 from pretty_help import PrettyHelp
 from dotenv import load_dotenv
+from src.util.Embedder import Embedder
 import asyncio
 
 bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
@@ -83,22 +84,22 @@ async def news(ctx, arg1, *args):
     brief="Returns the live price of the ticker")
 async def live(ctx, arg1, *args):
     if len(args) == 1 and args[0].upper() == 'CA':
+        currency = "CAD"
         if ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
             price = live_stock_price(str(arg1))
-            response = '```The current price of ' + str(arg1).upper() + ' is $' + str(price) + ' CAD.```'
-            await ctx.send(response)
+            embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
         else:
             price, suffix = findSuffix(str(arg1))
-            response = '```The current price of ' + str(arg1).upper() + suffix + ' is $' + str(price) + ' CAD.```'
-            await ctx.send(response)
+            embed = Embedder.embed(title=f"${str(arg1).upper()}{suffix}", message=f"${price} {currency}")
     elif ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
+        currency = "CAD"
         price = live_stock_price(str(arg1))
-        response = '```The current price of ' + str(arg1).upper() + ' is $' + str(price) + ' CAD.```'
-        await ctx.send(response)
+        embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
     else:
+        currency = "USD"
         price = live_stock_price(str(arg1))
-        response = '```The current price of ' + str(arg1).upper() + ' is $' + str(price) + ' USD.```'
-        await ctx.send(response)
+        embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
+    await ctx.send(embed=embed)
 
 
 @bot.command(
@@ -121,33 +122,79 @@ async def alert(ctx, ticker, price):
             await asyncio.sleep(10)
 
 
+@bot.command()
+async def buy(ctx, ticker: str, amount: int, price: float = None):
+    ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
+    await ctx.send(f"Bought {ticker} x {amount} at {ticker_price}\n"
+                   f"Total: ${'{:.2f}'.format(total)} {currency}")
+
+
+@bot.command()
+async def sell(ctx, ticker: str, amount: int, price: float = None):
+    ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
+    await ctx.send(f"Sold {ticker} x {amount} at {ticker_price}\n"
+                   f"Total: ${'{:.2f}'.format(total)} {currency}")
+
+
 @info.error
 async def info_error(ctx, error):
+    print(error)
     if isinstance(error, commands.CommandError):
-        await ctx.send('Came across an error while processing your request. '
-                       'Check if your region corresponds to the proper exchange, '
-                       'or re-check the ticker you used.')
+        msg = """
+        Came across an error while processing your request.
+        Check if your region corresponds to the proper exchange, 
+        or re-check the ticker you used.
+        """
+        await ctx.send(embed=Embedder.error(msg))
 
 
 @news.error
 async def news_error(ctx, error):
+    print(error)
     if isinstance(error, commands.CommandError):
-        await ctx.send('Came across an error while processing your request.')
+        msg = 'Came across an error while processing your request.'
+        await ctx.send(embed=Embedder.error(msg))
 
 
 @live.error
 async def live_error(ctx, error):
-    if isinstance(error, commands.CommandError):
-        await ctx.send('Came across an error while processing your request. '
-                       'Check if your region corresponds to the proper exchange, '
-                       'or re-check the ticker you used.')
+    print(error)
+    if isinstance(error, commands.CommandInvokeError):
+        msg = """
+        Came across an error while processing your request.
+        Check if your region corresponds to the proper exchange, 
+        or re-check the ticker you used.
+        """
+        await ctx.send(embed=Embedder.error(msg))
 
 
 @alert.error
 async def alert_error(ctx, error):
+    print(error)
     if isinstance(error, commands.CommandError):
-        await ctx.send('Came across an error while processing your request. '
-                       'Please check your ticker again.')
+        msg = 'Came across an error while processing your request. Please check your ticker again.'
+        await ctx.send(embed=Embedder.error(msg))
+
+
+@buy.error
+async def buy_badarg_error(ctx, error):
+    print(error)
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)]`"
+        await ctx.send(embed=Embedder.error(msg))
+    if isinstance(error, commands.CommandInvokeError):
+        msg = "Invalid ticker."
+        await ctx.send(embed=Embedder.error(msg))
+
+
+@sell.error
+async def sell_badarg_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
+        await ctx.send(embed=Embedder.error(msg))
+    if isinstance(error, commands.CommandInvokeError):
+        msg = "Invalid ticker."
+        await ctx.send(embed=Embedder.error(msg))
 
 
 @bot.event

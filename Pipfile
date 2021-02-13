@@ -13,6 +13,7 @@ requests = "*"
 datetime = "*"
 pandas = "*"
 requests-html = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 

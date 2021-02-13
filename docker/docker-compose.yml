@@ -21,7 +21,7 @@ services:
       stockbotnet:
         ipv4_address: 172.18.1.3
         aliases:
-          - tpm-mysql
+          - stockbot-mysql
 
   stockbot:
     container_name: stockbot
@@ -36,3 +36,8 @@ services:
     build:
       context: ../
       dockerfile: docker/stockbot.dockerfile
+    networks:
+      stockbotnet:
+        ipv4_address: 172.18.1.4
+        aliases:
+          - stockbot-worker

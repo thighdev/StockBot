@@ -1,8 +1,6 @@
-import requests
 import os
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
-
 
 suffixes = ['.V', '.TO', '.NE']
 load_dotenv()
@@ -196,3 +194,17 @@ def findSuffix(ticker, i=0):
         return findSuffix(ticker, i)
     else:
         return live_stock_price(ticker + suffixes[i]), suffixes[i]
+
+
+def is_cad(text):
+    return any([('.V' in text.upper()), ('.NE' in text.upper()), ('.TO' in text.upper())])
+
+
+def calculate_total(ticker: str, amount: int, price: float = None):
+    ticker = ticker.upper()
+    currency = "CAD" if is_cad(ticker) else "USD"
+    live_price = live_stock_price(ticker)
+    if live_price:
+        ticker_price = price if price else live_price
+        total = ticker_price * amount
+        return ticker_price, total, currency
