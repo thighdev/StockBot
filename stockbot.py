@@ -4,11 +4,13 @@ from discord.ext import commands
 from pretty_help import PrettyHelp
 from dotenv import load_dotenv
 from src.util.Embedder import Embedder
+from src.positions import buy_position, get_portfolio
+from src.database import Session, connect
 import asyncio
 
 bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
-load_dotenv()
 token = os.getenv("TOKEN")
+database_url = os.getenv("DATABASE_URL")
 
 
 @bot.command(
@@ -124,16 +126,42 @@ async def alert(ctx, ticker, price):
 
 @bot.command()
 async def buy(ctx, ticker: str, amount: int, price: float = None):
+    session = Session()
     ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-    await ctx.send(f"Bought {ticker} x {amount} at {ticker_price}\n"
-                   f"Total: ${'{:.2f}'.format(total)} {currency}")
+    ticker = ticker.upper()
+    is_usd = True if currency == "USD" else False
+    user_id = str(ctx.message.author.id)
+    username = ctx.message.author.name
+    buy_complete = buy_position(session=session, user_id=user_id, username=username,
+                                symbol=ticker, amount=amount, price=ticker_price, is_usd=is_usd)
+    if buy_complete:
+        embed = Embedder.embed(title=f"Successfully bought ${ticker}",
+                               message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
+                                       f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
+    else:
+        embed = Embedder.error("Something went wrong.")
+    await ctx.send(embed=embed)
 
 
-@bot.command()
+@bot.command()  # TODO: WIP, not done.
 async def sell(ctx, ticker: str, amount: int, price: float = None):
     ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-    await ctx.send(f"Sold {ticker} x {amount} at {ticker_price}\n"
-                   f"Total: ${'{:.2f}'.format(total)} {currency}")
+    user_id = ctx.author.id
+    ticker = ticker.upper()
+    embed = Embedder.embed(title=f"Successfully sold ${ticker}",
+                           message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
+                                   f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
+    await ctx.send(embed=embed)
+
+
+@bot.command()  # TODO: add profit/loss
+async def portfolio(ctx):
+    session = Session()
+    user_id = ctx.author.id
+    username = ctx.author.name
+    portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username)
+    if portfolio_complete:
+        await ctx.send(f"""```{portfolio_complete}```""")
 
 
 @info.error
@@ -177,7 +205,7 @@ async def alert_error(ctx, error):
 
 
 @buy.error
-async def buy_badarg_error(ctx, error):
+async def buy_error(ctx, error):
     print(error)
     if isinstance(error, commands.BadArgument):
         msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)]`"
@@ -188,7 +216,7 @@ async def buy_badarg_error(ctx, error):
 
 
 @sell.error
-async def sell_badarg_error(ctx, error):
+async def sell_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
         await ctx.send(embed=Embedder.error(msg))
@@ -202,5 +230,6 @@ async def on_ready():
     print("We are online!")
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
+    connect(database_url)
 
 bot.run(token)

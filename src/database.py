@@ -1,5 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (Column, Integer, create_engine, Text, DateTime, Float, Boolean)
+from sqlalchemy import (Column, Integer, create_engine, Text, DateTime, Float, Boolean, BigInteger)
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import ClauseElement
 
@@ -10,17 +10,16 @@ Session = sessionmaker()
 class Users(Base):
     __tablename__ = "users"
 
-    user_id = Column(Integer(), primary_key=True)
+    id = Column(BigInteger(), primary_key=True)
+    user_id = Column(Text())
     username = Column(Text())
-    cash_cad = Column(Float())
-    cash_usd = Column(Float())
 
 
 class Symbols(Base):
     __tablename__ = "symbols"
 
     symbol_id = Column(Integer(), primary_key=True)
-    symbol_name = Column(Text())
+    symbol = Column(Text())
 
 
 class Positions(Base):
@@ -29,10 +28,10 @@ class Positions(Base):
     position_id = Column(Integer(), primary_key=True)
     user_id = Column(Integer())
     symbol_id = Column(Integer())
+    total_price = Column(Float())
     average_price = Column(Float())
     amount = Column(Integer())
     is_usd = Column(Boolean())
-    last_updated = Column(DateTime())
 
 
 def connect(url):
