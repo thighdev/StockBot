@@ -24,7 +24,11 @@ A Discord bot to display stock information
 Before doing anything :  
   * ***Make sure you are in the root directory of this project***
   * Create a `.env` file in the root directory
-  * In `.env`, put your bot's token in like `TOKEN=bot-token-here`  
+  * In `.env`, put your tokens in
+    ```
+    TOKEN=bot-token-here
+    RAPID-API-KEY=rapid-api-key-here
+    ```  
 
 Step-by-step :
 1. `invoke build`
