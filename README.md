@@ -27,7 +27,7 @@ Before doing anything :
   * In `.env`, put your bot's token in like `TOKEN=bot-token-here`  
 
 Step-by-step :
-1. `invoke compose build`
+1. `invoke build`
     * Builds the Docker containers needed to run this project
 2. `invoke dev`
     * Runs the containers and prompt you when they are done
