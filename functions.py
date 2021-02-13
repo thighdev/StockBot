@@ -184,6 +184,61 @@ def getDetails(ticker, region):
 
         return stock_details, name
 
+def getHistoricalData(ticker, region, days):
+    """
+    :param ticker: str (the ticker of the stock you are looking for)
+    :param days: int (the number of days to compare the current stock price to)
+    :return: dict (stock name with info relating to historical comparison based on given amount of days)
+    """
+    # Yahoo Finance requires Canadian stocks to have .TO at the end of the ticker e.g.
+    # SU.TO. So we automatically add .TO to the ticker if the region set is CA.
+    if region.upper() == "CA":
+        if ('.V' in ticker.upper()) or ('.NE' in ticker.upper()) or ('.TO' in ticker.upper()):
+            pass
+        else:
+            price, suffix = findSuffix(ticker)
+            ticker = ticker + suffix
+
+    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-news"
+
+    querystring = {"symbol": ticker, "region": region}
+
+    headers = {
+        'x-rapidapi-key': token,
+        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
+        "useQueryString": true
+    }
+
+    #TODO: get stock's historical date so we don't have a null value - number of days could exceed the stock's age somehow
+    if days > 200:
+        raise Exception("Value exceeds maximum number of days (200). Please enter a smaller value.")
+    elif days < 1:
+        raise Exception("Invalid Entry. Value must be between 1 and 200. Please try again.")
+
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    # Transform the data into json so we can fetch the data we need easily.
+    data = response.json()
+    # We get the data from prices on the given amount of days wanted from historical data
+    historicalData = data['prices'][days]
+
+    # If the fetched results are empty, that means the data has to be invalid.
+    if len(historicalData) == 0:
+        raise Exception("Invalid Entry, please try again.")
+
+    current_data = getDetails(ticker, region)
+
+    # Compare both data points and derive a monetary difference between the two in number and percentage values.
+    amountDiffNumerical = current_data['Current Price'] - historicalData['close']
+    amountDiffPercentage = 0
+
+    if amountDiffNumerical < 0:
+        # If the current value is lower than the historical data, we negate the ratio since it's a negative percentage drop.
+        amountDiffPercentage = -(historicalData['close'] / current_data['Current Price'])
+    else:
+        amountDiffPercentage = current_data['Current Price'] / historicalData['close']
+
+    return amountDiffNumerical, amountDiffPercentage
+
 # Recursively tries to find the associated suffix
 # for the corresponding stock in the TSX.
 def findSuffix(ticker, i=0):

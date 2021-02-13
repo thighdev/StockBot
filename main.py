@@ -100,6 +100,21 @@ async def live(ctx, arg1, *args):
         response = '```The current price of ' + str(arg1).upper() + ' is $' + str(price) + ' USD.```'
         await ctx.send(response)
 
+@bot.command(
+    help="Requires one argument ticker and one optional argument region (specifically for Canada) and one argument number of days. Example !hist TSLA 45"
+         "or !live BB CA 14",
+    brief="Returns info regarding increase or decrease in stock price in the last x days")
+async def historical(ctx, arg1, *args):
+    if args[0].isdigit():
+        # No region specified, default to US
+        priceDiff, pricePercent = getHistoricalData(arg1, 'US', args[0])
+        response = str(arg1.upper()) + ' performance in last ' + str(args[0]) + ' days: ' + str(priceDiff) + '(%' + str(pricePercent) + ')'
+        await ctx.send(response)
+    else:
+        # Region is specified, so there should be 2 arguments: region and number of days
+        priceDiff, pricePercent = getHistoricalData(arg1, args[0].upper(), args[1])
+        response = str(arg1.upper()) + ' performance in last ' + str(args[1]) + ' days: ' + str(priceDiff) + '(%' + str(pricePercent) + ')'
+        await ctx.send(response)
 
 @bot.command(
     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
