@@ -1,9 +1,36 @@
 import src.database as db
+from src.functions import get_live_price
 from tabulate import tabulate
+from forex_python.converter import CurrencyRates
 
 
-def sell_position(session, user_id: int, symbol: str, amount: int, price: float, is_usd: bool):
-    pass
+def sell_position(session, user_id: str, username: str, symbol: str, amount: int, price: float):
+    try:
+        symbol = get_symbol_or_create(session, symbol)
+        symbol_id = symbol[0].symbol_id
+        user = get_user_or_create(session, user_id=user_id, username=username)
+        user_id = user[0].id
+        existing = get_existing_position(session=session, user_id=user_id, symbol_id=symbol_id)
+        if existing:
+            ex_total, ex_amount = existing.total_price, existing.amount
+            if ex_amount < amount:
+                return False
+            elif ex_amount == amount:
+                session.delete(existing)
+                return True
+            new_total_price = float(ex_total - price * amount)
+            new_amount = ex_amount - amount
+            existing.total_price = new_total_price
+            existing.amount = new_amount
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(e)
+        return False
+    finally:
+        session.commit()
+        session.close()
 
 
 def buy_position(session, user_id: str, username: str, symbol: str, amount: int, price: float, is_usd: bool):
@@ -16,7 +43,7 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
         existing = get_existing_position(session=session, user_id=user_id, symbol_id=symbol_id)
         if existing:
             ex_total, ex_amount = existing.total_price, existing.amount
-        new_total_price = ex_total + price * amount
+        new_total_price = float(ex_total + price * amount)
         new_amount = ex_amount + amount
         new_average_price = new_total_price / new_amount
         if existing:
@@ -38,18 +65,49 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
 
 
 def get_portfolio(session, user_id: str, username: str):
-    user = get_user_or_create(session=session, user_id=user_id, username=username)
-    user_id = user[0].id
-    positions = session.query(db.Positions).filter_by(user_id=user_id).all()
-    portfolio = []
-    for pos in positions:
-        symbol_id = pos.symbol_id
-        symbol = session.query(db.Symbols).filter_by(symbol_id=symbol_id).one().symbol
-        total_price = pos.total_price
-        amount = pos.amount
-        average_price = pos.average_price
-        portfolio.append([symbol, total_price, amount, average_price])
-    return generate_portfolio_table(portfolio)
+    try:
+        user = get_user_or_create(session=session, user_id=user_id, username=username)
+        user_id = user[0].id
+        positions = session.query(db.Positions).filter_by(user_id=user_id).all()
+        portfolio = []
+        portfolio_total_usd = 0
+        portfolio_total_cad = 0
+        for pos in positions:
+            symbol_id = pos.symbol_id
+            symbol = session.query(db.Symbols).filter_by(symbol_id=symbol_id).one().symbol
+            is_usd = pos.is_usd
+            currency = "USD" if is_usd else "CAD"
+            amount = pos.amount
+            average_price = pos.average_price
+            live_price = get_live_price(symbol)
+            live_total_price = amount * live_price
+            original_total_price = pos.total_price
+            current_total_price = live_price * amount
+            if is_usd:
+                portfolio_total_usd += current_total_price
+            else:
+                portfolio_total_cad += current_total_price
+            pl = live_total_price - current_total_price + 0
+            pl_percent = ((live_price - average_price) / average_price) * 100
+            positive = "+" if pl > 0 else ""
+            portfolio.append([symbol,
+                              f"x {amount}",
+                              format(average_price, '.2f'),
+                              format(current_total_price, '.2f'),
+                              positive + format(current_total_price - original_total_price, '.2f'),
+                              positive + f"{format(pl_percent, '.2f')}%",
+                              currency])
+        total_in_usd = portfolio_total_usd + convert("CAD", "USD", portfolio_total_cad)
+        total_in_cad = convert("USD", "CAD", portfolio_total_usd) + portfolio_total_cad
+        portfolio_total = [[format(portfolio_total_usd, '.2f'),
+                            format(portfolio_total_cad, '.2f'),
+                            format(total_in_usd, '.2f'),
+                            format(total_in_cad, '.2f')]]
+        return generate_portfolio_table(portfolio), generate_portfolio_total(portfolio_total)
+    except Exception as e:
+        print(e)
+    finally:
+        session.close()
 
 
 def get_symbol_or_create(session, symbol: str):
@@ -67,5 +125,17 @@ def get_existing_position(session, user_id, symbol_id: int):
     return existing
 
 
-def generate_portfolio_table(list):
-    return tabulate(list, headers=["Symbol", "Total", "Amount", "Average"])
+def generate_portfolio_table(portfolio):
+    return tabulate(portfolio,
+                    headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
+                    disable_numparse=True)
+
+
+def generate_portfolio_total(portfolio_total):
+    return tabulate(portfolio_total,
+                    headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
+                    disable_numparse=True)
+
+
+def convert(initial, final, amount):
+    return CurrencyRates().convert(base_cur=initial, dest_cur=final, amount=amount)

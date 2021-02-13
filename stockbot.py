@@ -4,7 +4,7 @@ from discord.ext import commands
 from pretty_help import PrettyHelp
 from dotenv import load_dotenv
 from src.util.Embedder import Embedder
-from src.positions import buy_position, get_portfolio
+from src.positions import buy_position, sell_position, get_portfolio
 from src.database import Session, connect
 import asyncio
 
@@ -145,12 +145,19 @@ async def buy(ctx, ticker: str, amount: int, price: float = None):
 
 @bot.command()  # TODO: WIP, not done.
 async def sell(ctx, ticker: str, amount: int, price: float = None):
+    session = Session()
     ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-    user_id = ctx.author.id
     ticker = ticker.upper()
-    embed = Embedder.embed(title=f"Successfully sold ${ticker}",
-                           message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
-                                   f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
+    user_id = str(ctx.message.author.id)
+    username = ctx.message.author.name
+    sell_complete = sell_position(session=session, user_id=user_id, username=username,
+                                  symbol=ticker, amount=amount, price=ticker_price)
+    if sell_complete:
+        embed = Embedder.embed(title=f"Successfully Sold ${ticker}",
+                               message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
+                                       f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
+    else:
+        embed = Embedder.error("Check if you have enough positions to sell!")
     await ctx.send(embed=embed)
 
 
@@ -161,7 +168,8 @@ async def portfolio(ctx):
     username = ctx.author.name
     portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username)
     if portfolio_complete:
-        await ctx.send(f"""```{portfolio_complete}```""")
+        await ctx.send(f"""```{portfolio_complete[0]}```""")
+        await ctx.send(f"""```{portfolio_complete[1]}```""")
 
 
 @info.error
@@ -223,6 +231,7 @@ async def sell_error(ctx, error):
     if isinstance(error, commands.CommandInvokeError):
         msg = "Invalid ticker."
         await ctx.send(embed=Embedder.error(msg))
+    print(error)
 
 
 @bot.event
