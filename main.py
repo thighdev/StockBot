@@ -2,9 +2,11 @@ import discord
 from functions import *
 from discord.ext import commands
 from pretty_help import PrettyHelp
+from dotenv import load_dotenv
 import asyncio
 
 bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
+load_dotenv()
 token = os.getenv("TOKEN")
 
 
