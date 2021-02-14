@@ -13,6 +13,10 @@ requests = "*"
 datetime = "*"
 pandas = "*"
 requests-html = "*"
+sqlalchemy = "*"
+pymysql = "*"
+tabulate = "*"
+forex-python = "*"
 
 [dev-packages]
 
