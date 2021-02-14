@@ -39,7 +39,7 @@ Step-by-step for Linux:
 3. `invoke runbot`
     * Runs the bot
 
-Step-by-step for Windows:
+Step-by-step for Windows (using cmd/Powershell):
 1. `docker-compose -f docker/docker-compose.yml build`
     * Builds the Docker containers needed to run this project
 2. `docker-compose -f docker/docker-compose.yml up -d`
