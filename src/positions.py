@@ -20,8 +20,7 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
                 session.delete(existing)
                 return True
             new_amount = ex_amount - amount
-            average_price = existing.average_price
-            existing.total_price = average_price * new_amount
+            existing.total_price = ex_total - price * new_amount
             existing.amount = new_amount
             return True
         else:
