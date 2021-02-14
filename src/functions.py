@@ -156,6 +156,7 @@ def getDetails(ticker, region):
     volume_today = priceKey["regularMarketVolume"]["fmt"]
     mkt_cap = priceKey["marketCap"]["fmt"]
     name = priceKey["longName"]
+    currency = data["earnings"]["financialCurrency"]
 
     # Grab the necessary data within summaryDetail, so 52 week high, 52 week low and potential dividends.
     summaryDetail = data["summaryDetail"]
@@ -165,7 +166,8 @@ def getDetails(ticker, region):
     # Place the details in a hash so we can iterate through it so we can put it into something.
     stock_details = {'Opening Price': opening_price, 'Current Price': curr_price, 'Day High': day_high,
                      'Day Low': day_low, 'Percent Change': percent_change, 'Volume': volume_today,
-                     'Mkt Cap': mkt_cap, '52 Week High': fifty_two_week_high, '52 Week Low': fifty_two_week_low}
+                     'Mkt Cap': mkt_cap, '52 Week High': fifty_two_week_high, '52 Week Low': fifty_two_week_low,
+                     'Currency': currency}
 
     # Not all stocks have dividends, so we have to consider that case.
     if len(summaryDetail["trailingAnnualDividendYield"]) == 0:
@@ -181,6 +183,61 @@ def getDetails(ticker, region):
         stock_details['Div Date'] = div_date
 
         return stock_details, name
+
+def getHistoricalData(ticker, region, days):
+    """
+    :param ticker: str (the ticker of the stock you are looking for)
+    :param region: str (the region where the stock is traded)
+    :param days: int (the number of days to compare the current stock price to)
+    :return: tuple<float, float> (Value of difference between days in numerical and percentage representation)
+    """
+    # Yahoo Finance requires Canadian stocks to have .TO at the end of the ticker e.g.
+    # SU.TO. So we automatically add .TO to the ticker if the region set is CA.
+    if region.upper() == "CA":
+        if ('.V' in ticker.upper()) or ('.NE' in ticker.upper()) or ('.TO' in ticker.upper()):
+            pass
+        else:
+            price, suffix = findSuffix(ticker)
+            ticker = ticker + suffix
+
+    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-historical-data"
+
+    querystring = {"symbol": ticker, "region": region}
+
+    headers = {
+        'x-rapidapi-key': token,
+        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
+    }
+
+    #TODO: get stock's historical date so we don't have a null value - number of days could exceed the stock's age somehow
+    if int(days) > 200:
+        raise Exception("Value exceeds maximum number of days (200). Please enter a smaller value.")
+    elif int(days) < 1:
+        raise Exception("Invalid Entry. Value must be between 1 and 200. Please try again.")
+
+    response = requests.request("GET", url, headers=headers, params=querystring)
+    # Transform the data into json so we can fetch the data we need easily.
+    data = response.json()
+    # We get the data from prices on the given amount of days wanted from historical data
+    historicalData = data['prices'][int(days)]
+
+    # If the fetched results are empty, that means the data has to be invalid.
+    if len(historicalData) == 0:
+        raise Exception("Invalid Entry, please try again.")
+
+    current_data = getDetails(ticker, region)[0]
+
+    # Compare both data points and derive a monetary difference between the two in number and percentage values.
+    amountDiffNumerical = float(current_data['Current Price']) - float(historicalData['close'])
+    amountDiffPercentage = (amountDiffNumerical / float(historicalData['close'])) * 100
+
+    stock_details = {
+        'PriceChange' : round(amountDiffNumerical, 2), 
+        'PriceChangePercentage' : round(amountDiffPercentage, 2), 
+        'Currency' : current_data['Currency']
+    }
+
+    return stock_details
 
 # Recursively tries to find the associated suffix
 # for the corresponding stock in the TSX.

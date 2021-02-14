@@ -103,6 +103,35 @@ async def live(ctx, arg1, *args):
         embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
     await ctx.send(embed=embed)
 
+@bot.command(
+    help="Requires one argument ticker and one optional argument region (specifically for Canada) and one argument number of days. Example !hist TSLA 45"
+         "or !live BB CA 14",
+    brief="Returns info regarding increase or decrease in stock price in the last x days")
+async def hist(ctx, arg1, *args):
+
+    if args[0].isdigit():
+        # No region specified, default to US
+        stockResult = getHistoricalData(arg1, 'US', args[0])
+        marker = '' if stockResult['PriceChange'] < 0 else '+'
+        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult['PriceChangePercentage']
+        response = '```' + str(arg1.upper())\
+            + ' performance in last '\
+            + str(args[0])\
+            + f' days: {marker}${pricediff:.2f} {currency} ({marker}{percentdiff:.2f}%)```'
+
+        await ctx.send(response)
+
+    else:
+        # Region is specified, so there should be 2 arguments: region and number of days
+        stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
+        marker = '' if priceDiff < 0 else '+'
+        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult['PriceChangePercentage']
+        response = '```' + str(arg1.upper())\
+            + ' performance in last '\
+            + str(args[1])\
+            + f' days: {marker}${pricediff:.2f} {currency} ({marker}{percentdiff:.2f}%)```'
+
+        await ctx.send(response)
 
 @bot.command(
     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
