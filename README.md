@@ -28,6 +28,7 @@ Before doing anything :
     ```
     TOKEN=bot-token-here
     RAPID-API-KEY=rapid-api-key-here
+    DATABASE_URL=mysql+pymysql://root:root@mysql/stockbot?charset=utf8mb4
     ```  
 
 Step-by-step :
