@@ -47,6 +47,14 @@ Step-by-step for Windows (using cmd/Powershell):
 3. `docker-compose -f docker/docker-compose.yml exec stockbot python /apps/stockbot/stockbot.py`
     * Runs the bot 
 
+Step-by-step for Windows (using mintty/git bash):
+1. `docker-compose -f docker/docker-compose.yml build`
+    * Builds the Docker containers needed to run this project
+2. `docker-compose -f docker/docker-compose.yml up -d`
+    * Runs the containers and prompt you when they are done
+3. `winpty docker-compose -f docker/docker-compose.yml exec stockbot python //apps//stockbot//stockbot.py`
+    * Runs the bot 
+
 
 ## Altering Dependencies
 Currently, the project is using `Pipenv` to manage dependencies.
