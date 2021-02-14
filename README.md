@@ -31,14 +31,23 @@ Before doing anything :
     DATABASE_URL=mysql+pymysql://root:root@mysql/stockbot?charset=utf8mb4
     ```  
 
-Step-by-step :
+Step-by-step for Linux:
 1. `invoke build`
     * Builds the Docker containers needed to run this project
 2. `invoke dev`
     * Runs the containers and prompt you when they are done
 3. `invoke runbot`
     * Runs the bot
-    
+
+Step-by-step for Windows:
+1. `docker-compose -f docker/docker-compose.yml build`
+    * Builds the Docker containers needed to run this project
+2. `docker-compose -f docker/docker-compose.yml up -d`
+    * Runs the containers and prompt you when they are done
+3. `docker-compose -f docker/docker-compose.yml exec stockbot python /apps/stockbot/stockbot.py`
+    * Runs the bot 
+
+
 ## Altering Dependencies
 Currently, the project is using `Pipenv` to manage dependencies.
 However, the container for the worker is using `requirements.txt`.
