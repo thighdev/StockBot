@@ -28,13 +28,15 @@ def build(c):
 @invoke.task(help={"verbose": "(Prints docker-compose log in real time)"})
 def dev(c, verbose=False):
     """
-    One-button solution for getting the containers up
+    One-button solution for getting the containers up and run the bot
     """
     if verbose:
         compose(c, "up")
     else:
         compose(c, "up -d")
-    print("Dev should be up.")
+    print("Containers are now up.")
+    print("Running bot ...")
+    runbot(c)
 
 
 @invoke.task
@@ -50,4 +52,4 @@ def runbot(c):
     """
     Runs the bot
     """
-    compose(c, "exec stockbot python /apps/stockbot/main.py")
+    compose(c, "exec stockbot python /apps/stockbot/stockbot.py")

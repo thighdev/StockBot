@@ -17,11 +17,17 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: stockbot
     networks:
       stockbotnet:
         ipv4_address: 172.18.1.3
         aliases:
           - stockbot-mysql
+    healthcheck:
+      test: mysql -h 127.0.0.1 -uroot -proot stockbot -e 'select 1'
+      interval: 5s
+      timeout: 5s
+      retries: 100
 
   stockbot:
     container_name: stockbot
@@ -30,9 +36,14 @@ services:
     tty: true
     depends_on:
       mysql:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - "../:/apps/stockbot:Z"
     build:
       context: ../
       dockerfile: docker/stockbot.dockerfile
+    networks:
+      stockbotnet:
+        ipv4_address: 172.18.1.4
+        aliases:
+          - stockbot-worker
