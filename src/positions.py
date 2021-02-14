@@ -103,7 +103,13 @@ def get_portfolio(session, user_id: str, username: str):
                             format(portfolio_total_cad, '.2f'),
                             format(total_in_usd, '.2f'),
                             format(total_in_cad, '.2f')]]
-        return generate_portfolio_table(portfolio), generate_portfolio_total(portfolio_total)
+        portfolio_table = tabulate(portfolio,
+                                   headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
+                                   disable_numparse=True)
+        portfolio_total_table = tabulate(portfolio_total,
+                                         headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
+                                         disable_numparse=True)
+        return portfolio_table, portfolio_total_table
     except Exception as e:
         print(e)
     finally:
@@ -123,18 +129,6 @@ def get_user_or_create(session, user_id: str, username: str):
 def get_existing_position(session, user_id, symbol_id: int):
     existing = session.query(db.Positions).filter_by(user_id=user_id, symbol_id=symbol_id).first()
     return existing
-
-
-def generate_portfolio_table(portfolio):
-    return tabulate(portfolio,
-                    headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
-                    disable_numparse=True)
-
-
-def generate_portfolio_total(portfolio_total):
-    return tabulate(portfolio_total,
-                    headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
-                    disable_numparse=True)
 
 
 def convert(initial, final, amount):
