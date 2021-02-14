@@ -18,9 +18,8 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
             elif ex_amount == amount:
                 session.delete(existing)
                 return True
-            new_total_price = float(ex_total - price * amount)
             new_amount = ex_amount - amount
-            existing.total_price = new_total_price
+            existing.total_price = ex_total * new_amount
             existing.amount = new_amount
             return True
         else:
