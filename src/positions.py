@@ -5,6 +5,7 @@ from forex_python.converter import CurrencyRates
 
 
 def sell_position(session, user_id: str, username: str, symbol: str, amount: int, price: float):
+    # TODO: incorporate price, and maybe add cash attr for users
     try:
         symbol = get_symbol_or_create(session, symbol)
         symbol_id = symbol[0].symbol_id
@@ -19,7 +20,8 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
                 session.delete(existing)
                 return True
             new_amount = ex_amount - amount
-            existing.total_price = ex_total * new_amount
+            average_price = existing.average_price
+            existing.total_price = average_price * new_amount
             existing.amount = new_amount
             return True
         else:
