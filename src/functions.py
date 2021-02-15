@@ -88,7 +88,6 @@ def getNews(ticker):
     data = response.json()
     # The data we need is under the key result, but item is also a key to result.
     news_json = data['items']['result']
-
     # If the fetched results are empty, that means the data has to be invalid.
     if len(news_json) == 0:
         raise Exception("Invalid Entry, please try again.")
@@ -156,7 +155,7 @@ def getDetails(ticker, region):
     volume_today = priceKey["regularMarketVolume"]["fmt"]
     mkt_cap = priceKey["marketCap"]["fmt"]
     name = priceKey["longName"]
-    currency = data["earnings"]["financialCurrency"]
+    #currency = data["earnings"]["financialCurrency"]
 
     # Grab the necessary data within summaryDetail, so 52 week high, 52 week low and potential dividends.
     summaryDetail = data["summaryDetail"]
@@ -166,8 +165,7 @@ def getDetails(ticker, region):
     # Place the details in a hash so we can iterate through it so we can put it into something.
     stock_details = {'Opening Price': opening_price, 'Current Price': curr_price, 'Day High': day_high,
                      'Day Low': day_low, 'Percent Change': percent_change, 'Volume': volume_today,
-                     'Mkt Cap': mkt_cap, '52 Week High': fifty_two_week_high, '52 Week Low': fifty_two_week_low,
-                     'Currency': currency}
+                     'Mkt Cap': mkt_cap, '52 Week High': fifty_two_week_high, '52 Week Low': fifty_two_week_low}
 
     # Not all stocks have dividends, so we have to consider that case.
     if len(summaryDetail["trailingAnnualDividendYield"]) == 0:

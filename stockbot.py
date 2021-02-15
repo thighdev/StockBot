@@ -2,8 +2,7 @@ import discord
 from src.functions import *
 from discord.ext import commands
 from pretty_help import PrettyHelp
-from dotenv import load_dotenv
-from src.util.Embedder import Embedder
+from src.util.Embedder import *
 from src.positions import buy_position, sell_position, get_portfolio
 from src.database import Session, connect
 import asyncio
@@ -18,8 +17,8 @@ database_url = os.getenv("DATABASE_URL")
     brief="Returns the top gainers, losses and volume from the US.")
 async def movers(ctx):
     titles, top_gainers, top_losers, top_volume = getMovers()
-    embedtop = discord.Embed(title=titles[0])
-    embedloser = discord.Embed(title=titles[1])
+    embedtop = discord.Embed(title=titles[0], colour=Colour.green())
+    embedloser = discord.Embed(title=titles[1], colour=Colour.red())
     embedvolume = discord.Embed(title=titles[2])
 
     for key, value in top_gainers.items():
@@ -44,7 +43,7 @@ async def info(ctx, arg1, arg2='US'):
     keys = ['Opening Price', 'Current Price', 'Day High',
             'Day Low', '52 Week High', '52 Week Low']
     stock_details, name = getDetails(str(arg1), str(arg2))
-    embed = discord.Embed(title="Information on " + name)
+    embed = discord.Embed(title="Information on " + name, colour=Colour.green())
     if len(stock_details) == 9:
         for key, value in stock_details.items():
             if key in keys:
@@ -103,35 +102,36 @@ async def live(ctx, arg1, *args):
         embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
     await ctx.send(embed=embed)
 
+
 @bot.command(
     help="Requires one argument ticker and one optional argument region (specifically for Canada) and one argument number of days. Example !hist TSLA 45"
          "or !live BB CA 14",
     brief="Returns info regarding increase or decrease in stock price in the last x days")
 async def hist(ctx, arg1, *args):
-
     if args[0].isdigit():
         # No region specified, default to US
         stockResult = getHistoricalData(arg1, 'US', args[0])
         marker = '' if stockResult['PriceChange'] < 0 else '+'
-        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult['PriceChangePercentage']
-        response = '```' + str(arg1.upper())\
-            + ' performance in last '\
-            + str(args[0])\
-            + f' days: {marker}${pricediff:.2f} {currency} ({marker}{percentdiff:.2f}%)```'
-
-        await ctx.send(response)
+        currency, pricediff, percentdiff = stockResult['Currency'], \
+                                           stockResult['PriceChange'], stockResult['PriceChangePercentage']
+        embed = Embedder.embed(title=f"{(arg1.upper())} Performance In The Last {str(args[0])} Days:",
+                               message=f"{marker}${pricediff:.2f} {currency} "
+                                       f"({marker}{percentdiff:.2f}%)")
+        await ctx.send(embed=embed)
 
     else:
         # Region is specified, so there should be 2 arguments: region and number of days
+        suffix = findSuffix(arg1)[1]
         stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
         marker = '' if stockResult['PriceChange'] < 0 else '+'
-        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult['PriceChangePercentage']
-        response = '```' + str(arg1.upper())\
-            + ' performance in last '\
-            + str(args[1])\
-            + f' days: {marker}${pricediff:.2f} {currency} ({marker}{percentdiff:.2f}%)```'
+        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult[
+            'PriceChangePercentage']
+        embed = Embedder.embed(title=f"{(arg1.upper())}{suffix} Performance In The Last {str(args[1])} Days:",
+                               message=f"{marker}${pricediff:.2f} {currency} "
+                                       f"({marker}{percentdiff:.2f}%)")
 
-        await ctx.send(response)
+        await ctx.send(embed=embed)
+
 
 @bot.command(
     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
@@ -142,7 +142,7 @@ async def alert(ctx, ticker, price):
         while True:
             print(live_stock_price(ticker))
             if float(live_stock_price(ticker)) <= float(price):
-                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```" )
+                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
                 break
             await asyncio.sleep(10)
     else:
@@ -207,7 +207,7 @@ async def info_error(ctx, error):
     if isinstance(error, commands.CommandError):
         msg = """
         Came across an error while processing your request.
-        Check if your region corresponds to the proper exchange, 
+        Check if your region corresponds to the proper exchange,
         or re-check the ticker you used.
         """
         await ctx.send(embed=Embedder.error(msg))
@@ -227,7 +227,7 @@ async def live_error(ctx, error):
     if isinstance(error, commands.CommandInvokeError):
         msg = """
         Came across an error while processing your request.
-        Check if your region corresponds to the proper exchange, 
+        Check if your region corresponds to the proper exchange,
         or re-check the ticker you used.
         """
         await ctx.send(embed=Embedder.error(msg))
@@ -269,5 +269,6 @@ async def on_ready():
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
     connect(database_url)
+
 
 bot.run(token)
