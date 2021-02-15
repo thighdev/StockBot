@@ -89,18 +89,18 @@ async def live(ctx, arg1, *args):
         currency = "CAD"
         if ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
             price = live_stock_price(str(arg1))
-            embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
+            embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
         else:
             price, suffix = findSuffix(str(arg1))
-            embed = Embedder.embed(title=f"${str(arg1).upper()}{suffix}", message=f"${price} {currency}")
+            embed = Embedder.embed(title=f"{str(arg1).upper()}{suffix}", message=f"${price} {currency}")
     elif ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
         currency = "CAD"
         price = live_stock_price(str(arg1))
-        embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
+        embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
     else:
         currency = "USD"
         price = live_stock_price(str(arg1))
-        embed = Embedder.embed(title=f"${str(arg1).upper()}", message=f"${price} {currency}")
+        embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
     await ctx.send(embed=embed)
 
 @bot.command(
@@ -124,7 +124,7 @@ async def hist(ctx, arg1, *args):
     else:
         # Region is specified, so there should be 2 arguments: region and number of days
         stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
-        marker = '' if priceDiff < 0 else '+'
+        marker = '' if stockResult['PriceChange'] < 0 else '+'
         currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult['PriceChangePercentage']
         response = '```' + str(arg1.upper())\
             + ' performance in last '\

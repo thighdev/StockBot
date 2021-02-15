@@ -225,16 +225,21 @@ def getHistoricalData(ticker, region, days):
     if len(historicalData) == 0:
         raise Exception("Invalid Entry, please try again.")
 
-    current_data = getDetails(ticker, region)[0]
+    current_data = get_live_price(ticker)
 
     # Compare both data points and derive a monetary difference between the two in number and percentage values.
-    amountDiffNumerical = float(current_data['Current Price']) - float(historicalData['close'])
+    amountDiffNumerical = float(current_data) - float(historicalData['close'])
     amountDiffPercentage = (amountDiffNumerical / float(historicalData['close'])) * 100
+
+    if is_cad(ticker):
+        currency = 'CAD'
+    else:
+        currency = 'USD'
 
     stock_details = {
         'PriceChange' : round(amountDiffNumerical, 2), 
         'PriceChangePercentage' : round(amountDiffPercentage, 2), 
-        'Currency' : current_data['Currency']
+        'Currency' : currency
     }
 
     return stock_details

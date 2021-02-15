@@ -1,12 +1,11 @@
 import invoke
 
-
 @invoke.task(help={"arg": "(Takes docker-compose arguments. Use quotes for multiple arguments.)"})
 def compose(c, arg):
     """
     Acts as docker-compose
     """
-    c.run(f"docker-compose -f docker/docker-compose.yml {arg}", pty=True)
+    c.run(f"docker-compose -f docker/docker-compose.yml {arg}", pty=False)
 
 
 @invoke.task
@@ -26,7 +25,7 @@ def build(c):
 
 
 @invoke.task(help={"verbose": "(Prints docker-compose log in real time)"})
-def dev(c, verbose=False):
+def dev(c, verbose=True):
     """
     One-button solution for getting the containers up and run the bot
     """
