@@ -65,3 +65,4 @@ Step-by-step :
     * This will update your own dependencies
 2. `invoke requirements`
     * Converts `Pipenv` dependencies into `requirements.txt`
+    * If you are in Windows, use `pipenv run pip freeze > requirements.txt
