@@ -61,7 +61,7 @@ Currently, the project is using `Pipenv` to manage dependencies.
 However, the container for the worker is using `requirements.txt`.
 
 Step-by-step :
-1. `Pipenv [install|uninstall|upgrade] package`
+1. `pipenv [install|uninstall|upgrade] package`
     * This will update your own dependencies
 2. `invoke requirements`
     * Converts `Pipenv` dependencies into `requirements.txt`
