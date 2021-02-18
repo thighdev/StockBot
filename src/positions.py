@@ -1,4 +1,5 @@
 import src.database as db
+import discord
 from src.functions import get_live_price
 from tabulate import tabulate
 from forex_python.converter import CurrencyRates
@@ -64,12 +65,12 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
         session.close()
 
 
-def get_portfolio(session, user_id: str, username: str):
+def get_portfolio(session, user_id: str, username: str, mobile: bool):
     try:
         user = get_user_or_create(session=session, user_id=user_id, username=username)
         user_id = user[0].id
         positions = session.query(db.Positions).filter_by(user_id=user_id).all()
-        portfolio = []
+        portfolio = discord.Embed(title=f"{username}'s Portfolio", colour=discord.Colour.green()) if mobile else []
         portfolio_total_usd = 0
         portfolio_total_cad = 0
         for pos in positions:
@@ -87,31 +88,57 @@ def get_portfolio(session, user_id: str, username: str):
                 portfolio_total_usd += current_total_price
             else:
                 portfolio_total_cad += current_total_price
-            pl = live_total_price - current_total_price + 0
+            pl = live_total_price - original_total_price
             pl_percent = ((live_price - average_price) / average_price) * 100
             positive = "+" if pl > 0 else ""
-            portfolio.append([symbol,
-                              f"x {amount}",
-                              format(average_price, '.2f'),
-                              format(current_total_price, '.2f'),
-                              positive + format(current_total_price - original_total_price, '.2f'),
-                              positive + f"{format(pl_percent, '.2f')}%",
-                              currency])
-        total_in_usd = portfolio_total_usd + convert("CAD", "USD", portfolio_total_cad)
-        total_in_cad = convert("USD", "CAD", portfolio_total_usd) + portfolio_total_cad
-        portfolio_total = [[format(portfolio_total_usd, '.2f'),
-                            format(portfolio_total_cad, '.2f'),
-                            format(total_in_usd, '.2f'),
-                            format(total_in_cad, '.2f')]]
-        portfolio_table = tabulate(portfolio,
-                                   headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
-                                   disable_numparse=True)
-        portfolio_total_table = tabulate(portfolio_total,
-                                         headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
-                                         disable_numparse=True)
-        return portfolio_table, portfolio_total_table
+            pl = positive + neg_zero_handler(format(pl, '.2f'))
+            pl_percent = positive + f"{neg_zero_handler(format(pl_percent, '.2f'))}%"
+            average_price = format(average_price, '.2f')
+            current_total_price = format(current_total_price, '.2f')
+            if mobile:
+                portfolio.add_field(name=f"**{symbol}**",
+                                    value=f"> Amount: {amount}\n"
+                                          f"> Average Price: {average_price}\n"
+                                          f"> Total: {current_total_price}\n"
+                                          f"> P/L: {pl}\n"
+                                          f"> P/L %: {pl_percent}\n"
+                                          f"> Currency: {currency}")
+            else:
+                portfolio.append([symbol,
+                                  f"x {amount}",
+                                  average_price,
+                                  current_total_price,
+                                  pl,
+                                  pl_percent,
+                                  currency])
+        total_in_usd = format(portfolio_total_usd + convert("CAD", "USD", portfolio_total_cad), '.2f')
+        total_in_cad = format(convert("USD", "CAD", portfolio_total_usd) + portfolio_total_cad, '.2f')
+        portfolio_total_usd = format(portfolio_total_usd, '.2f')
+        portfolio_total_cad = format(portfolio_total_cad, '.2f')
+        portfolio_total = [[portfolio_total_usd,
+                            portfolio_total_usd,
+                            total_in_usd,
+                            total_in_cad]]
+        if mobile:
+            portfolio_total_mobile = discord.Embed(title=f"{username}'s Portfolio Summary",
+                                                   colour=discord.Colour.green())
+            portfolio_total_mobile.add_field(name="Total USD", value=portfolio_total_usd)
+            portfolio_total_mobile.add_field(name="Total CAD", value=portfolio_total_cad)
+            portfolio_total_mobile.add_field(name="Total in USD", value=total_in_usd)
+            portfolio_total_mobile.add_field(name="Total in CAD", value=total_in_cad)
+            return portfolio, portfolio_total_mobile
+
+        else:
+            portfolio_table = tabulate(portfolio,
+                                       headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
+                                       disable_numparse=True)
+            portfolio_total_table = tabulate(portfolio_total,
+                                             headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
+                                             disable_numparse=True)
+            return portfolio_table, portfolio_total_table
     except Exception as e:
         print(e)
+        raise Exception
     finally:
         session.close()
 
@@ -133,3 +160,7 @@ def get_existing_position(session, user_id, symbol_id: int):
 
 def convert(initial, final, amount):
     return CurrencyRates().convert(base_cur=initial, dest_cur=final, amount=amount)
+
+
+def neg_zero_handler(neg_zero):
+    return "0.00" if neg_zero == "-0.00" else neg_zero

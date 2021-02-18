@@ -5,7 +5,7 @@ def compose(c, arg):
     """
     Acts as docker-compose
     """
-    c.run(f"docker-compose -f docker/docker-compose.yml {arg}", pty=False)
+    c.run(f"docker-compose -f docker/docker-compose.yml {arg}", pty=True)
 
 
 @invoke.task
@@ -25,7 +25,7 @@ def build(c):
 
 
 @invoke.task(help={"verbose": "(Prints docker-compose log in real time)"})
-def dev(c, verbose=True):
+def dev(c, verbose=False):
     """
     One-button solution for getting the containers up and run the bot
     """
