@@ -7,7 +7,7 @@ from src.positions import buy_position, sell_position, get_portfolio
 from src.database import Session, connect
 import asyncio
 
-bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
+bot = commands.Bot(command_prefix="$", help_command=PrettyHelp(no_category='Commands'))
 token = os.getenv("TOKEN")
 database_url = os.getenv("DATABASE_URL")
 
@@ -172,7 +172,7 @@ async def buy(ctx, ticker: str, amount: int, price: float = None):
     await ctx.send(embed=embed)
 
 
-@bot.command()  # TODO: WIP, not done.
+@bot.command()
 async def sell(ctx, ticker: str, amount: int, price: float = None):
     session = Session()
     ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
@@ -190,15 +190,23 @@ async def sell(ctx, ticker: str, amount: int, price: float = None):
     await ctx.send(embed=embed)
 
 
-@bot.command()  # TODO: add profit/loss
-async def portfolio(ctx):
+@bot.command()  # TODO: add profit/loss for portfolio summary
+async def portfolio(ctx, mobile=""):
+    if mobile and mobile not in ("m", "mobile"):
+        raise discord.ext.commands.BadArgument
     session = Session()
     user_id = ctx.author.id
     username = ctx.author.name
-    portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username)
-    if portfolio_complete:
+    mobile = bool(mobile)
+    portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username, mobile=mobile)
+    if portfolio_complete and mobile:
+        await ctx.send(embed=portfolio_complete[0])
+        await ctx.send(embed=portfolio_complete[1])
+    else:
         await ctx.send(f"""```{portfolio_complete[0]}```""")
         await ctx.send(f"""```{portfolio_complete[1]}```""")
+    if not portfolio_complete:
+        await ctx.send(Embedder.error(""))
 
 
 @info.error
@@ -260,7 +268,13 @@ async def sell_error(ctx, error):
     if isinstance(error, commands.CommandInvokeError):
         msg = "Invalid ticker."
         await ctx.send(embed=Embedder.error(msg))
-    print(error)
+
+
+@portfolio.error
+async def portfolio_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
+        await ctx.send(embed=Embedder.error(msg))
 
 
 @bot.event
