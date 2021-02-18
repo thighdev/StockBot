@@ -7,7 +7,7 @@ from src.positions import buy_position, sell_position, get_portfolio
 from src.database import Session, connect
 import asyncio
 
-bot = commands.Bot(command_prefix="$", help_command=PrettyHelp(no_category='Commands'))
+bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
 token = os.getenv("TOKEN")
 database_url = os.getenv("DATABASE_URL")
 
