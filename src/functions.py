@@ -76,47 +76,48 @@ def getMovers():
     for k, v in get_day_gainers().to_dict().items():
         if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change']:
             day_gainers[k] = v
-        if len(day_gainers) > 6:
+        if len(day_gainers) == 5:
             break
 
     for k, v in get_day_losers().to_dict().items():
         if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change']:
             day_losers[k] = v
-        if len(day_losers) > 6:
+        if len(day_losers) == 5:
             break
 
     for k, v in get_day_most_active().to_dict().items():
         if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change', 'Volume']:
             top_volume[k] = v
-        if len(top_volume) > 6:
+        if len(top_volume) == 6:
             break
 
     gainers = discord.Embed(title="Day Gainers:", colour=discord.Colour.green())
     for i in range(0, 6):
         gainers.add_field(name=f"**{day_gainers['Name'][i]}**",
-                            value=f"> Ticker: {day_gainers['Symbol'][i]}\n"
-                                  f"> Price: ${day_gainers['Price (Intraday)'][i]}\n"
-                                  f"> Change: +{day_gainers['Change'][i]}\n"
-                                  f"> % Change: +{round(day_gainers['% Change'][i], 2)}%\n")
+                          value=f"> Ticker: {day_gainers['Symbol'][i]}\n"
+                                f"> Price: ${day_gainers['Price (Intraday)'][i]}\n"
+                                f"> Change: +{day_gainers['Change'][i]}\n"
+                                f"> % Change: +{round(day_gainers['% Change'][i], 2)}%\n")
 
     losers = discord.Embed(title="Day Losers:", colour=discord.Colour.red())
     for i in range(0, 6):
         losers.add_field(name=f"**{day_losers['Name'][i]}**",
-                            value=f"> Ticker: {day_losers['Symbol'][i]}\n"
-                                  f"> Price: ${day_losers['Price (Intraday)'][i]}\n"
-                                  f"> Change: {day_losers['Change'][i]}\n"
-                                  f"> % Change: {round(day_losers['% Change'][i], 2)}%\n")
+                         value=f"> Ticker: {day_losers['Symbol'][i]}\n"
+                               f"> Price: ${day_losers['Price (Intraday)'][i]}\n"
+                               f"> Change: {day_losers['Change'][i]}\n"
+                               f"> % Change: {round(day_losers['% Change'][i], 2)}%\n")
 
     volume = discord.Embed(title="Top Volume:")
     for i in range(0, 6):
         volume.add_field(name=f"**{top_volume['Name'][i]}**",
-                            value=f"> Ticker: {top_volume['Symbol'][i]}\n"
-                                  f"> Price: ${top_volume['Price (Intraday)'][i]}\n"
-                                  f"> Change: {top_volume['Change'][i]}\n"
-                                  f"> % Change: {round(top_volume['% Change'][i], 2)}%\n"
-                                  f"> Volume: {humanize_number(top_volume['Volume'][i], 1)}\n")
+                         value=f"> Ticker: {top_volume['Symbol'][i]}\n"
+                               f"> Price: ${top_volume['Price (Intraday)'][i]}\n"
+                               f"> Change: {top_volume['Change'][i]}\n"
+                               f"> % Change: {round(top_volume['% Change'][i], 2)}%\n"
+                               f"> Volume: {humanize_number(top_volume['Volume'][i], 1)}\n")
 
     return gainers, losers, volume
+
 
 def getDetails(ticker, region):
     """
@@ -134,7 +135,6 @@ def getDetails(ticker, region):
         else:
             price, suffix = findSuffix(ticker)
             ticker = ticker + suffix
-
 
     url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-summary"
     querystring = {"symbol": ticker, "region": region}
@@ -156,7 +156,7 @@ def getDetails(ticker, region):
     volume_today = priceKey["regularMarketVolume"]["fmt"]
     mkt_cap = priceKey["marketCap"]["fmt"]
     name = priceKey["longName"]
-    #currency = data["earnings"]["financialCurrency"]
+    # currency = data["earnings"]["financialCurrency"]
 
     # Grab the necessary data within summaryDetail, so 52 week high, 52 week low and potential dividends.
     summaryDetail = data["summaryDetail"]
@@ -183,6 +183,7 @@ def getDetails(ticker, region):
 
         return stock_details, name
 
+
 def getHistoricalData(ticker, region, days):
     """
     :param ticker: str (the ticker of the stock you are looking for)
@@ -208,7 +209,7 @@ def getHistoricalData(ticker, region, days):
         'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
     }
 
-    #TODO: get stock's historical date so we don't have a null value - number of days could exceed the stock's age somehow
+    # TODO: get stock's historical date so we don't have a null value - number of days could exceed the stock's age somehow
     if int(days) > 200:
         raise Exception("Value exceeds maximum number of days (200). Please enter a smaller value.")
     elif int(days) < 1:
@@ -236,12 +237,13 @@ def getHistoricalData(ticker, region, days):
         currency = 'USD'
 
     stock_details = {
-        'PriceChange' : round(amountDiffNumerical, 2), 
-        'PriceChangePercentage' : round(amountDiffPercentage, 2), 
-        'Currency' : currency
+        'PriceChange': round(amountDiffNumerical, 2),
+        'PriceChangePercentage': round(amountDiffPercentage, 2),
+        'Currency': currency
     }
 
     return stock_details
+
 
 # Recursively tries to find the associated suffix
 # for the corresponding stock in the TSX.
@@ -289,4 +291,3 @@ def humanize_number(value, fraction_point=1):
         return_value = "-" + return_value
 
     return return_value
-
