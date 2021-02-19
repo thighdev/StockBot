@@ -74,21 +74,19 @@ def getMovers():
     day_losers = {}
     top_volume = {}
     for k, v in get_day_gainers().to_dict().items():
-        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change' \
-                or k == 'Volume':
+        if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change']:
             day_gainers[k] = v
         if len(day_gainers) > 6:
             break
 
     for k, v in get_day_losers().to_dict().items():
-        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change' \
-                or k == 'Volume':
+        if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change']:
             day_losers[k] = v
         if len(day_losers) > 6:
             break
+
     for k, v in get_day_most_active().to_dict().items():
-        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change'\
-                or k == 'Volume':
+        if k in ['Name', 'Symbol', 'Price (Intraday)', 'Change', '% Change', 'Volume']:
             top_volume[k] = v
         if len(top_volume) > 6:
             break
