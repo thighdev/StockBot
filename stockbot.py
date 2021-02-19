@@ -11,28 +11,14 @@ bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Comm
 token = os.getenv("TOKEN")
 database_url = os.getenv("DATABASE_URL")
 
-
 @bot.command(
     help="Requires no arguments, just checks for the top gainers, losses and volume in the US. e.g. !movers",
     brief="Returns the top gainers, losses and volume from the US.")
 async def movers(ctx):
-    titles, top_gainers, top_losers, top_volume = getMovers()
-    embedtop = discord.Embed(title=titles[0], colour=Colour.green())
-    embedloser = discord.Embed(title=titles[1], colour=Colour.red())
-    embedvolume = discord.Embed(title=titles[2])
-
-    for key, value in top_gainers.items():
-        embedtop.add_field(name=key, value=value, inline=True)
-
-    for key, value in top_losers.items():
-        embedloser.add_field(name=key, value=value, inline=True)
-
-    for key, value in top_volume.items():
-        embedvolume.add_field(name=key, value=value, inline=True)
-
-    await ctx.send(embed=embedtop)
-    await ctx.send(embed=embedloser)
-    await ctx.send(embed=embedvolume)
+    day_gainers, day_losers, top_volume = getMovers()
+    await ctx.send(embed=day_gainers)
+    await ctx.send(embed=day_losers)
+    await ctx.send(embed=top_volume)
 
 
 @bot.command(
