@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
+import discord
 
 suffixes = ['.V', '.TO', '.NE']
 load_dotenv()
@@ -13,58 +14,6 @@ def live_stock_price(ticker):
     :return: datatype: numpy-float64 (the price of the ticker)
     """
     return round(get_live_price(ticker), 2)
-
-
-def getMovers():
-    """
-    :return: titles: list (list of titles that represent the top gainers, top losers and top volume in US)
-             symbols_top_volume, symbols_top_losers, symbols_top_volume: dicts
-             (dict of the top gainers, top losers and top volume for the day)
-    """
-
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/market/v2/get-movers"
-
-    querystring = {"region": "US", "lang": "en-US", "start": "0", "count": "6"}
-
-    headers = {
-        'x-rapidapi-key': token,
-        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com"
-    }
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    data = response.json()
-    # print(data)
-    # print(data['finance']['result'])
-
-    titles = []
-    for i in range(3):
-        titles.append(data['finance']['result'][i]['title'])
-
-    # Hash the symbols by the keys (which will be indicated by the rank)
-    top_gainers = data['finance']['result'][0]['quotes']
-    symbols_top_gainers = {}
-    #print(top_gainers[0]['symbol'])
-    for i in range(0, 6):
-        symbols_top_gainers[i + 1] = top_gainers[i]['symbol']
-
-
-
-    # Hash the symbols by the keys (which will be indicated by the rank)
-    top_losers = data['finance']['result'][1]['quotes']
-    symbols_top_losers = {}
-    for i in range(0, 6):
-        symbols_top_losers[i + 1] = top_losers[i]['symbol']
-
-    # print(symbols_top_losers)
-    # Hash the symbols by the keys (which will be indicated by the rank)
-    top_volume = data['finance']['result'][2]['quotes']
-    symbols_top_volume = {}
-    for i in range(0, 6):
-        symbols_top_volume[i + 1] = top_volume[i]['symbol']
-
-    # print(symbols_top_volume)
-
-    return titles, symbols_top_gainers, symbols_top_losers, symbols_top_volume
 
 
 def getNews(ticker):
@@ -116,6 +65,60 @@ def getNews(ticker):
     res = dict(zip(summaries, links))
     return res, titles
 
+
+def getMovers():
+    """
+    :return: Embedded details on the top 6 gainers, losers and volume in the US for the day.
+    """
+    day_gainers = {}
+    day_losers = {}
+    top_volume = {}
+    for k, v in get_day_gainers().to_dict().items():
+        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change' \
+                or k == 'Volume':
+            day_gainers[k] = v
+        if len(day_gainers) > 6:
+            break
+
+    for k, v in get_day_losers().to_dict().items():
+        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change' \
+                or k == 'Volume':
+            day_losers[k] = v
+        if len(day_losers) > 6:
+            break
+    for k, v in get_day_most_active().to_dict().items():
+        if k == 'Name' or k == 'Symbol' or k == 'Price (Intraday)' or k == 'Change' or k == '% Change'\
+                or k == 'Volume':
+            top_volume[k] = v
+        if len(top_volume) > 6:
+            break
+
+    gainers = discord.Embed(title="Day Gainers:", colour=discord.Colour.green())
+    for i in range(0, 6):
+        gainers.add_field(name=f"**{day_gainers['Name'][i]}**",
+                            value=f"> Ticker: {day_gainers['Symbol'][i]}\n"
+                                  f"> Price: ${day_gainers['Price (Intraday)'][i]}\n"
+                                  f"> Change: +{day_gainers['Change'][i]}\n"
+                                  f"> % Change: +{round(day_gainers['% Change'][i], 2)}%\n")
+
+    losers = discord.Embed(title="Day Losers:", colour=discord.Colour.red())
+    for i in range(0, 6):
+        losers.add_field(name=f"**{day_losers['Name'][i]}**",
+                            value=f"> Ticker: {day_losers['Symbol'][i]}\n"
+                                  f"> Price: ${day_losers['Price (Intraday)'][i]}\n"
+                                  f"> Change: {day_losers['Change'][i]}\n"
+                                  f"> % Change: {round(day_losers['% Change'][i], 2)}%\n")
+
+    volume = discord.Embed(title="Top Volume:")
+    for i in range(0, 6):
+        volume.add_field(name=f"**{top_volume['Name'][i]}**",
+                            value=f"> Ticker: {top_volume['Symbol'][i]}\n"
+                                  f"> Price: ${top_volume['Price (Intraday)'][i]}\n"
+                                  f"> Change: {top_volume['Change'][i]}\n"
+                                  f"> % Change: {round(top_volume['% Change'][i], 2)}%\n"
+                                  f"> Volume: {humanize_number(top_volume['Volume'][i], 1)}\n")
+
+    return gainers, losers, volume
 
 def getDetails(ticker, region):
     """
@@ -268,3 +271,24 @@ def calculate_total(ticker: str, amount: int, price: float = None):
         ticker_price = price if price else live_price
         total = ticker_price * amount
         return ticker_price, total, currency
+
+
+def humanize_number(value, fraction_point=1):
+    powers = [10 ** x for x in (12, 9, 6, 3, 0)]
+    human_powers = ('T', 'B', 'M', 'K', '')
+    is_negative = False
+    if not isinstance(value, float):
+        value = float(value)
+    if value < 0:
+        is_negative = True
+        value = abs(value)
+    for i, p in enumerate(powers):
+        if value >= p:
+            return_value = str(round(value / (p / (10.0 ** fraction_point))) /
+                               (10 ** fraction_point)) + human_powers[i]
+            break
+    if is_negative:
+        return_value = "-" + return_value
+
+    return return_value
+
