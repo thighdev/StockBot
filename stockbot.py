@@ -96,7 +96,12 @@ async def live(ctx, arg1, *args):
 async def hist(ctx, arg1, *args):
     if args[0].isdigit():
         # No region specified, default to US
-        stockResult = getHistoricalData(arg1, 'US', args[0])
+        try:
+            stockResult = getHistoricalData(arg1, 'US', args[0])
+        except Exception as e:
+            await ctx.send(embed = Embedder.error(str(e)))
+            return
+
         marker = '' if stockResult['PriceChange'] < 0 else '+'
         currency, pricediff, percentdiff = stockResult['Currency'], \
                                            stockResult['PriceChange'], stockResult['PriceChangePercentage']
@@ -108,7 +113,12 @@ async def hist(ctx, arg1, *args):
     else:
         # Region is specified, so there should be 2 arguments: region and number of days
         suffix = findSuffix(arg1)[1]
-        stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
+        try:
+            stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
+        except Exception as e:
+            await ctx.send(embed = Embedder.error(str(e)))
+            return
+        
         marker = '' if stockResult['PriceChange'] < 0 else '+'
         currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult[
             'PriceChangePercentage']

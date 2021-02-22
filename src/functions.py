@@ -218,12 +218,16 @@ def getHistoricalData(ticker, region, days):
     response = requests.request("GET", url, headers=headers, params=querystring)
     # Transform the data into json so we can fetch the data we need easily.
     data = response.json()
+
+    if len(data['prices']) < int(days):
+        raise Exception("Invalid Entry. The stock may not have data available for this time period. Please try again.")
+    
     # We get the data from prices on the given amount of days wanted from historical data
     historicalData = data['prices'][int(days)]
 
     # If the fetched results are empty, that means the data has to be invalid.
     if len(historicalData) == 0:
-        raise Exception("Invalid Entry, please try again.")
+        raise Exception("Invalid Entry. The stock may not have data available for this time period. Please try again.")
 
     current_data = get_live_price(ticker)
 
