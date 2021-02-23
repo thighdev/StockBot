@@ -12,7 +12,7 @@ import asyncio
 TOKEN = os.getenv("TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 SENTRY_DSN = os.getenv("SENTRY_DSN")
-bot = commands.Bot(command_prefix="$", help_command=PrettyHelp(no_category='Commands'))
+bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
 
 
 @bot.command(
