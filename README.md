@@ -29,15 +29,14 @@ Before doing anything :
     TOKEN=bot-token-here
     RAPID-API-KEY=rapid-api-key-here
     DATABASE_URL=mysql+pymysql://root:root@mysql/stockbot?charset=utf8mb4
+    SENTRY_DSN=sentry-here
     ```  
 
 Step-by-step for Linux:
 1. `invoke build`
     * Builds the Docker containers needed to run this project
 2. `invoke dev`
-    * Runs the containers and prompt you when they are done
-3. `invoke runbot`
-    * Runs the bot
+    * Runs the containers, then runs the bot
 
 Step-by-step for Windows (using cmd/Powershell):
 1. `docker-compose -f docker/docker-compose.yml build`
