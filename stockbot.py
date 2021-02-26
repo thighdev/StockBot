@@ -3,13 +3,17 @@ from src.functions import *
 from discord.ext import commands
 from pretty_help import PrettyHelp
 from src.util.Embedder import *
+from src.util.SentryHelper import uncaught
 from src.positions import buy_position, sell_position, get_portfolio
 from src.database import Session, connect
+import sentry_sdk
 import asyncio
 
+TOKEN = os.getenv("TOKEN")
+DATABASE_URL = os.getenv("DATABASE_URL")
+SENTRY_DSN = os.getenv("SENTRY_DSN")
 bot = commands.Bot(command_prefix="!", help_command=PrettyHelp(no_category='Commands'))
-token = os.getenv("TOKEN")
-database_url = os.getenv("DATABASE_URL")
+
 
 @bot.command(
     help="Requires no arguments, just checks for the top gainers, losses and volume in the US. e.g. !movers",
@@ -197,78 +201,101 @@ async def portfolio(ctx, mobile=""):
 
 @info.error
 async def info_error(ctx, error):
-    print(error)
     if isinstance(error, commands.CommandError):
         msg = """
         Came across an error while processing your request.
         Check if your region corresponds to the proper exchange,
         or re-check the ticker you used.
         """
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @news.error
 async def news_error(ctx, error):
-    print(error)
     if isinstance(error, commands.CommandError):
         msg = 'Came across an error while processing your request.'
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @live.error
 async def live_error(ctx, error):
-    print(error)
     if isinstance(error, commands.CommandInvokeError):
         msg = """
         Came across an error while processing your request.
         Check if your region corresponds to the proper exchange,
         or re-check the ticker you used.
         """
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @alert.error
 async def alert_error(ctx, error):
-    print(error)
     if isinstance(error, commands.CommandError):
         msg = 'Came across an error while processing your request. Please check your ticker again.'
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @buy.error
 async def buy_error(ctx, error):
-    print(error)
     if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)]`"
-        await ctx.send(embed=Embedder.error(msg))
-    if isinstance(error, commands.CommandInvokeError):
+        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
+    elif isinstance(error, commands.CommandInvokeError):
         msg = "Invalid ticker."
-        await ctx.send(embed=Embedder.error(msg))
+    elif isinstance(error, commands.MissingRequiredArgument):
+        msg = "Missing arguments;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @sell.error
 async def sell_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
-        await ctx.send(embed=Embedder.error(msg))
-    if isinstance(error, commands.CommandInvokeError):
+    elif isinstance(error, commands.CommandInvokeError):
         msg = "Invalid ticker."
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
 
 @portfolio.error
 async def portfolio_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
-        await ctx.send(embed=Embedder.error(msg))
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
+
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return await ctx.send(embed=Embedder.error("Command does not exist."))
+    elif hasattr(ctx.command, "on_error"):
+        return
+    else:
+        msg = uncaught(error)
+    return await ctx.send(embed=Embedder.error(msg))
 
 
 @bot.event
 async def on_ready():
+    sentry_sdk.init(
+        SENTRY_DSN,
+        traces_sample_rate=1.0
+    )
+    connect(DATABASE_URL)
     print("We are online!")
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
-    connect(database_url)
 
-
-bot.run(token)
+bot.run(TOKEN)

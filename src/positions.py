@@ -26,9 +26,6 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
             return True
         else:
             return False
-    except Exception as e:
-        print(e)
-        return False
     finally:
         session.commit()
         session.close()
@@ -56,12 +53,9 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
                                         total_price=new_total_price, average_price=new_average_price,
                                         amount=new_amount, is_usd=is_usd)
             session.add(position_row)
-        session.commit()
         return True
-    except Exception as e:
-        print(e)
-        return False
     finally:
+        session.commit()
         session.close()
 
 
@@ -136,9 +130,6 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
                                              headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
                                              disable_numparse=True)
             return portfolio_table, portfolio_total_table
-    except Exception as e:
-        print(e)
-        raise Exception
     finally:
         session.close()
 

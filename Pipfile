@@ -17,6 +17,7 @@ sqlalchemy = "*"
 pymysql = "*"
 tabulate = "*"
 forex-python = "*"
+sentry-sdk = "*"
 
 [dev-packages]
 
