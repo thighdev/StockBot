@@ -20,14 +20,15 @@ To run the bot, run `python stockbot.py`
 Docker and docker-compose makes running the bot extremely simple.  
 First, configure your `.env` file as mentioned before, but with `DATABASE_URL=mysql+pymysql://root:root@mysql/stockbot?charset=utf8mb4`.  
 This is the MySQL container's database URL.  
-To run the bot in a Linux environment, install [PyInvoke](http://www.pyinvoke.org/), and proceed:
+#### To run the bot in a Linux environment, install [PyInvoke](http://www.pyinvoke.org/), and proceed:
   1. `invoke build`
-  2. `invoke dev`
+  2. `invoke dev`  
+
 That's it!  
 
-To run the bot in a Windows environemnt:
+#### To run the bot in a Windows environemnt:
 1. `docker-compose -f docker/docker-compose.yml build`
-2. `docker-compose -f docker/docker-compose.yml up -d`
+2. `docker-compose -f docker/docker-compose.yml up -d`  
 * If you are using CMD or PowerShell:  
 3. `docker-compose -f docker/docker-compose.yml exec stockbot python /apps/stockbot/stockbot.py`  
 * If you are using mintty or gitbash:  
