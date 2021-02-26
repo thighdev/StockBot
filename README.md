@@ -5,16 +5,16 @@ StockBot is a self-hostable [Discord bot](https://discordpy.readthedocs.io/en/la
 Optionally, you may choose to run the bot using [Docker](https://www.docker.com/) and docker-compose.  
 
 ## Configuration, Installation, and Execution
-StockBot uses `.env` file to configure environmental variables. This file needs to exist in the root directory with correct environment variables for the bot to run.  
-Create a `.env` file in the root directory and configure like following:
+1. Run `git clone https://github.com/thaixnguyen/StockBot.git` to clone the repository.  
+2. Create a `.env` file in the root directory and configure like following:
 ```
 TOKEN=bot-token-here
 RAPID-API-KEY=rapid-api-key-here
 DATABASE_URL=database-url-here
 SENTRY_DSN=sentry-here
 ```
-To install, run `git clone https://github.com/thaixnguyen/StockBot.git`  
-Install all the dependencies (using a virtual environment is strongly encouraged), then run `python stockbot.py`
+3. Install all the dependencies with `pipenv install`.  
+4. Run the bot with `pipenv run python stockbot.py`
 
 ### Docker
 Docker and docker-compose makes running the bot extremely simple.  
