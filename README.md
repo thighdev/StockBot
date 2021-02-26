@@ -1,7 +1,7 @@
 # StockBot
 ## Introduction
 StockBot is a self-hostable [Discord bot](https://discordpy.readthedocs.io/en/latest/index.html) that provides various informations regarding stocks.  
-`Python 3` and `MySQL` are required to run the bot.  
+`Python 3`, `MySQL`, and `pipenv` are required to run the bot.  
 Optionally, you may choose to run the bot using [Docker](https://www.docker.com/) and docker-compose.  
 
 ## Configuration, Installation, and Execution
