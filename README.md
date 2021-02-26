@@ -14,7 +14,7 @@ DATABASE_URL=database-url-here
 SENTRY_DSN=sentry-here
 ```
 To install, run `git clone https://github.com/thaixnguyen/StockBot.git`  
-To run the bot, run `python stockbot.py`
+Install all the dependencies (using a virtual environment is strongly encouraged), then run `python stockbot.py`
 
 ### Docker
 Docker and docker-compose makes running the bot extremely simple.  
