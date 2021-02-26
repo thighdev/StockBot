@@ -67,4 +67,4 @@ Virtually sells a set amount of the stock. If price is not given, it will be the
 Returns the user's portfolio based on their `!buy` and `!sell` history. m or mobile argument will provide a mobile-friendly view
 
 ## Dev
-Visit [Dev](https://github.com/thaixnguyen/StockBot/blob/master/README.dev.md) for information.
+Please visit [Dev](https://github.com/thaixnguyen/StockBot/blob/master/README.dev.md) for information.  
