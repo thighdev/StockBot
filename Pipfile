@@ -18,6 +18,7 @@ pymysql = "*"
 tabulate = "*"
 forex-python = "*"
 sentry-sdk = "*"
+pytest = "*"
 
 [dev-packages]
 
