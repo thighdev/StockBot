@@ -1,4 +1,5 @@
 # StockBot
+![travis-ci](https://www.travis-ci.com/thighdev/StockBot.svg?branch=travis-implementation)
 ## Introduction
 StockBot is a self-hostable [Discord bot](https://discordpy.readthedocs.io/en/latest/index.html) that provides various informations regarding stocks.  
 `Python 3`, `MySQL`, and `pipenv` are required to run the bot.  
