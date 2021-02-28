@@ -13,6 +13,6 @@ script: pytest
 deploy:
   provider: script
   skip_cleanup: true
-  script: sshpass -e ssh $EC2_TRAVIS_SERVER ./deploy
+  script: sshpass -e ssh $EC2_TRAVIS_SERVER echo helloworld
   on:
     branch: master
