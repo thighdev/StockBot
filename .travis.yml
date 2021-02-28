@@ -2,7 +2,13 @@ language: python
 python:
   - "3.9"
 before_install:
+  - sudo apt-get -y install sshpass
   - python -m pip install --upgrade pip
 install:
   - pip install -r requirements.txt
 script: pytest
+deploy:
+  provider: script
+  script: sshpass -p $EC2_TRAVIS_PW  ssh $EC2_TRAVIS_SERVER './deploy'
+  on:
+    branch: master
