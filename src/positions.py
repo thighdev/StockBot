@@ -110,7 +110,7 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
         portfolio_total_usd = format(portfolio_total_usd, '.2f')
         portfolio_total_cad = format(portfolio_total_cad, '.2f')
         portfolio_total = [[portfolio_total_usd,
-                            portfolio_total_usd,
+                            portfolio_total_cad,
                             total_in_usd,
                             total_in_cad]]
         if mobile:
