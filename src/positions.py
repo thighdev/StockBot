@@ -94,23 +94,21 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
                                     value=f"> Amount: {amount}\n"
                                           f"> Average Price: {average_price}\n"
                                           f"> Total: {current_total_price}\n"
-                                          f"> P/L: {pl}\n"
-                                          f"> P/L %: {pl_percent}\n"
+                                          f"> P/L (%): {pl} ({pl_percent})\n"
                                           f"> Currency: {currency}")
             else:
                 portfolio.append([symbol,
                                   f"x {amount}",
                                   average_price,
                                   current_total_price,
-                                  pl,
-                                  pl_percent,
+                                  f"{pl} ({pl_percent})",
                                   currency])
         total_in_usd = format(portfolio_total_usd + convert("CAD", "USD", portfolio_total_cad), '.2f')
         total_in_cad = format(convert("USD", "CAD", portfolio_total_usd) + portfolio_total_cad, '.2f')
         portfolio_total_usd = format(portfolio_total_usd, '.2f')
         portfolio_total_cad = format(portfolio_total_cad, '.2f')
         portfolio_total = [[portfolio_total_usd,
-                            portfolio_total_usd,
+                            portfolio_total_cad,
                             total_in_usd,
                             total_in_cad]]
         if mobile:
@@ -124,7 +122,7 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
 
         else:
             portfolio_table = tabulate(portfolio,
-                                       headers=["Symbol", "Amount", "Average", "Total", "P/L", "P/L %", "Currency"],
+                                       headers=["Symbol", "Amount", "Average", "Total", "P/L (%)", "Currency"],
                                        disable_numparse=True)
             portfolio_total_table = tabulate(portfolio_total,
                                              headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD"],
