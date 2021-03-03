@@ -1,5 +1,6 @@
 import src.database as db
 import discord
+from discord.ext import commands
 from src.functions import get_live_price
 from tabulate import tabulate
 from forex_python.converter import CurrencyRates
@@ -64,6 +65,8 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
         user = get_user_or_create(session=session, user_id=user_id, username=username)
         user_id = user[0].id
         positions = session.query(db.Positions).filter_by(user_id=user_id).all()
+        if not positions:
+            raise NoPositionsException
         portfolio = discord.Embed(title=f"{username}'s Portfolio", colour=discord.Colour.green()) if mobile else []
         portfolio_total_usd = 0
         portfolio_total_cad = 0
@@ -181,3 +184,7 @@ def get_total_usd_cad(usd, cad):
     total_in_usd = usd + convert("CAD", "USD", cad)
     total_in_cad = cad + convert("USD", "CAD", usd)
     return total_in_usd, total_in_cad
+
+
+class NoPositionsException(commands.CommandError):
+    pass

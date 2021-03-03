@@ -4,7 +4,7 @@ from discord.ext import commands
 from pretty_help import PrettyHelp
 from src.util.Embedder import *
 from src.util.SentryHelper import uncaught
-from src.positions import buy_position, sell_position, get_portfolio
+from src.positions import buy_position, sell_position, get_portfolio, NoPositionsException
 from src.database import Session, connect
 import sentry_sdk
 import asyncio
@@ -273,6 +273,8 @@ async def sell_error(ctx, error):
 async def portfolio_error(ctx, error):
     if isinstance(error, commands.BadArgument):
         msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
+    elif isinstance(error, NoPositionsException):
+        msg = "No position was found with the user!\nTry `!buy` command first to add positions."
     else:
         msg = uncaught(error)
     await ctx.send(embed=Embedder.error(msg))
