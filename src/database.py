@@ -39,7 +39,7 @@ def connect(url):
     creates the engine and session
     :param url: sqlalchemy url
     """
-    engine = create_engine(url)
+    engine = create_engine(url, pool_pre_ping=True)
     Session.configure(bind=engine)
     Base.metadata.create_all(engine)
 
