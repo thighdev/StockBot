@@ -38,7 +38,11 @@ async def info(ctx, *args):
                    'regularMarketVolume', 'averageDailyVolume10Day', 'averageDailyVolume3Month',
                    'regularMarketPreviousClose', 'fiftyDayAverage', 'fiftyTwoWeekRange'
                    ]
-    group_info = group.get_quotes(cherrypicks=cherrypicks)
+    try:
+        group_info = group.get_quotes(cherrypicks=cherrypicks)
+    except DataRequestException:
+        msg = "Invalid ticker(s). Please check if you have correct tickers."
+        return await ctx.send(embed=Embedder.error(msg))
     for i, stock_info in enumerate(group_info):
         embed = discord.Embed(title=f"Information for {args[i].upper()}",
                               colour=discord.Colour.blue())
@@ -53,22 +57,14 @@ async def info(ctx, *args):
         await ctx.send(embed=embed)
 
 
-@info.error
-async def info_error(ctx, error: Exception):
-    if isinstance(error, commands.CommandError):
-        msg = error
-    elif isinstance(error, DataRequestException):
-        msg = "Invalid ticker(s). Please check if you have correct tickers."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
 @bot.command(
     help="Requires one argument, ticker. Example !news TSLA",
     brief="Returns recent news related to the specified ticker")
 async def news(ctx, ticker: str, region: str = "US", lang: str = "en-US"):
-    items = News(region=region, lang=lang).get_news(ticker, count=9)
+    try:
+        items = News(region=region, lang=lang).get_news(ticker, count=9)
+    except NoNewsFoundException:
+        return await ctx.send(embed=Embedder.error("No news was found with this ticker"))
     embed = discord.Embed(title=f"News for {ticker.upper()}", colour=discord.Colour.gold())
     est = pytz.timezone('US/Eastern')
     for i in items:
@@ -81,36 +77,16 @@ async def news(ctx, ticker: str, region: str = "US", lang: str = "en-US"):
     await ctx.send(embed=embed)
 
 
-@news.error
-async def news_error(ctx, error: Exception):
-    if isinstance(error, commands.CommandError):
-        msg = "Came across an error while processing your request."
-    elif isinstance(error, NoNewsFoundException):
-        msg = "No news was found with this ticker."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
 @bot.command()
 async def live(ctx, ticker: str):
     stock = Stock(ticker)
-    live_price, currency = stock.get_live()
+    try:
+        live_price, currency = stock.get_live()
+    except DataRequestException as e:
+        return await ctx.send(embed=Embedder.error(f"{str(e).upper()} is not a valid ticker"))
+
     embed = Embedder.embed(title=ticker.upper(), message=f"${format(live_price, '.2f')} {currency}")
     await ctx.send(embed=embed)
-
-
-@live.error
-async def live_error(ctx, error: Exception):
-    if isinstance(error, commands.CommandInvokeError):
-        msg = """
-        Came across an error while processing your request.
-        Check if your region corresponds to the proper exchange,
-        or re-check the ticker you used.
-        """
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
 
 
 @bot.command()
