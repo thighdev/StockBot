@@ -1,12 +1,11 @@
-import discord
 from src.functions import *
 from discord.ext import commands
 from pretty_help import PrettyHelp
 from src.util.Embedder import *
 from src.util.SentryHelper import uncaught
-from src.positions import buy_position, sell_position, get_portfolio, NoPositionsException
-from src.database import Session, connect
+from src.database import connect
 from financelite import *
+from src.cogs.positions_cog import Positions
 import pytz
 import dateparser
 import sentry_sdk
@@ -144,98 +143,6 @@ async def hist_error(ctx, error: Exception):
     await ctx.send(embed=Embedder.error(msg))
 
 
-
-@bot.command()
-async def buy(ctx, ticker: str, amount: int, price: float = None):
-    session = Session()
-    ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-    ticker = ticker.upper()
-    is_usd = True if currency == "USD" else False
-    user_id = str(ctx.message.author.id)
-    username = ctx.message.author.name
-    buy_complete = buy_position(session=session, user_id=user_id, username=username,
-                                symbol=ticker, amount=amount, price=ticker_price, is_usd=is_usd)
-    if buy_complete:
-        embed = Embedder.embed(title=f"Successfully bought ${ticker}",
-                               message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
-                                       f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
-    else:
-        embed = Embedder.error("Something went wrong.")
-    await ctx.send(embed=embed)
-
-
-@buy.error
-async def buy_error(ctx, error: Exception):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
-    elif isinstance(error, commands.CommandInvokeError):
-        msg = "Invalid ticker."
-    elif isinstance(error, commands.MissingRequiredArgument):
-        msg = "Missing arguments;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
-@bot.command()
-async def sell(ctx, ticker: str, amount: int, price: float = None):
-    session = Session()
-    ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-    ticker = ticker.upper()
-    user_id = str(ctx.message.author.id)
-    username = ctx.message.author.name
-    sell_complete = sell_position(session=session, user_id=user_id, username=username,
-                                  symbol=ticker, amount=amount, price=ticker_price)
-    if sell_complete:
-        embed = Embedder.embed(title=f"Successfully Sold ${ticker}",
-                               message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
-                                       f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
-    else:
-        embed = Embedder.error("Check if you have enough positions to sell!")
-    await ctx.send(embed=embed)
-
-
-@sell.error
-async def sell_error(ctx, error: Exception):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
-    elif isinstance(error, commands.CommandInvokeError):
-        msg = "Invalid ticker."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
-@bot.command()  # TODO: add profit/loss for portfolio summary
-async def portfolio(ctx, mobile: str = ""):
-    if mobile and mobile not in ("m", "mobile"):
-        raise discord.ext.commands.BadArgument
-    session = Session()
-    user_id = ctx.author.id
-    username = ctx.author.name
-    mobile = bool(mobile)
-    portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username, mobile=mobile)
-    if portfolio_complete and mobile:
-        await ctx.send(embed=portfolio_complete[0])
-        await ctx.send(embed=portfolio_complete[1])
-    else:
-        await ctx.send(f"""```{portfolio_complete[0]}```""")
-        await ctx.send(f"""```{portfolio_complete[1]}```""")
-    if not portfolio_complete:
-        await ctx.send(Embedder.error(""))
-
-
-@portfolio.error
-async def portfolio_error(ctx, error: Exception):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
-    elif isinstance(error, NoPositionsException):
-        msg = "No position was found with the user!\nTry `!buy` command first to add positions."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
 # TODO: this doesn't work for now
 # @bot.command(
 #     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
@@ -288,4 +195,5 @@ async def on_ready():
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
 
+bot.add_cog(Positions(bot))
 bot.run(TOKEN)
