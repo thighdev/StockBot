@@ -19,6 +19,8 @@ tabulate = "*"
 forex-python = "*"
 sentry-sdk = "*"
 pytest = "*"
+financelite = "*"
+dateparser = "*"
 
 [dev-packages]
 
