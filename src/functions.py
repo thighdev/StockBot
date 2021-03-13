@@ -66,16 +66,6 @@ def is_cad(text):
     return any([('.V' in text.upper()), ('.NE' in text.upper()), ('.TO' in text.upper())])
 
 
-def calculate_total(ticker: str, amount: int, price: float = None):
-    ticker = ticker.upper()
-    currency = "CAD" if is_cad(ticker) else "USD"
-    live_price = live_stock_price(ticker)
-    if live_price:
-        ticker_price = price if price else live_price
-        total = ticker_price * amount
-        return ticker_price, total, currency
-
-
 def humanize_number(value: Union[int, float], fraction_point: int = 1) -> str:
     powers = [10 ** x for x in (12, 9, 6, 3, 0)]
     human_powers = ('T', 'B', 'M', 'K', '')

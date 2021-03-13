@@ -1,5 +1,7 @@
 import src.database as db
 import discord
+from financelite import Stock
+from src.database import Session
 from discord.ext import commands
 from src.functions import get_live_price
 from tabulate import tabulate
@@ -7,7 +9,7 @@ from forex_python.converter import CurrencyRates
 
 
 def sell_position(session, user_id: str, username: str, symbol: str, amount: int, price: float):
-    # TODO: incorporate price, and maybe add cash attr for users
+    # TODO: maybe add cash attr for users
     try:
         symbol = get_symbol_or_create(session, symbol)
         symbol_id = symbol[0].symbol_id
@@ -32,9 +34,12 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
         session.close()
 
 
-def buy_position(session, user_id: str, username: str, symbol: str, amount: int, price: float, is_usd: bool):
+def buy_position(user_id: str, username: str, symbol: str, amount: int, price: float):
+    session = Session()
+    bought_price, currency = Stock(ticker=symbol).get_live()
+    bought_price = price if price else bought_price
     try:
-        symbol = get_symbol_or_create(session, symbol)
+        symbol = get_symbol_or_create(session, symbol, currency)
         symbol_id = symbol[0].symbol_id
         user = get_user_or_create(session, user_id=user_id, username=username)
         user_id = user[0].id
@@ -42,7 +47,7 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
         existing = get_existing_position(session=session, user_id=user_id, symbol_id=symbol_id)
         if existing:
             ex_total, ex_amount = existing.total_price, existing.amount
-        new_total_price = float(ex_total + price * amount)
+        new_total_price = float(ex_total + bought_price * amount)
         new_amount = ex_amount + amount
         new_average_price = new_total_price / new_amount
         if existing:
@@ -52,9 +57,9 @@ def buy_position(session, user_id: str, username: str, symbol: str, amount: int,
         else:
             position_row = db.Positions(user_id=user_id, symbol_id=symbol_id,
                                         total_price=new_total_price, average_price=new_average_price,
-                                        amount=new_amount, is_usd=is_usd)
+                                        amount=new_amount)
             session.add(position_row)
-        return True
+        return bought_price, currency
     finally:
         session.commit()
         session.close()
@@ -153,8 +158,8 @@ def get_portfolio(session, user_id: str, username: str, mobile: bool):
         session.close()
 
 
-def get_symbol_or_create(session, symbol: str):
-    symbol_default = {"symbol": symbol}
+def get_symbol_or_create(session, symbol: str, currency: str):
+    symbol_default = {"symbol": symbol.upper(), "currency": currency}
     return db.get_or_create(session=session, model=db.Symbols, defaults=symbol_default, symbol=symbol)
 
 
