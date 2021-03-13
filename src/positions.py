@@ -8,10 +8,17 @@ from tabulate import tabulate
 from forex_python.converter import CurrencyRates
 
 
-def sell_position(session, user_id: str, username: str, symbol: str, amount: int, price: float):
+class NotEnoughPositionsToSell(Exception):
+    pass
+
+
+def sell_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     # TODO: maybe add cash attr for users
+    session = Session()
     try:
-        symbol = get_symbol_or_create(session, symbol)
+        sold_price, currency = Stock(symbol).get_live()
+        sold_price = price if price else sold_price
+        symbol = get_symbol_or_create(session, symbol, currency)
         symbol_id = symbol[0].symbol_id
         user = get_user_or_create(session, user_id=user_id, username=username)
         user_id = user[0].id
@@ -19,16 +26,16 @@ def sell_position(session, user_id: str, username: str, symbol: str, amount: int
         if existing:
             ex_total, ex_amount = existing.total_price, existing.amount
             if ex_amount < amount:
-                return False
+                raise NotEnoughPositionsToSell
             elif ex_amount == amount:
                 session.delete(existing)
-                return True
+                return sold_price, currency
             new_amount = ex_amount - amount
-            existing.total_price = ex_total - price * new_amount
+            existing.total_price = ex_total - sold_price * new_amount
             existing.amount = new_amount
-            return True
+            return sold_price, currency
         else:
-            return False
+            raise NotEnoughPositionsToSell
     finally:
         session.commit()
         session.close()

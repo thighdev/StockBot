@@ -31,8 +31,6 @@ class Positions(commands.Cog):
     async def buy_error(self, ctx, error: Exception):
         if isinstance(error, commands.BadArgument):
             msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
-        elif isinstance(error, commands.CommandInvokeError):
-            msg = "Invalid ticker."
         elif isinstance(error, commands.MissingRequiredArgument):
             msg = "Missing arguments;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
         else:
@@ -41,19 +39,15 @@ class Positions(commands.Cog):
 
     @commands.command()
     async def sell(self, ctx, ticker: str, amount: int, price: float = None):
-        session = Session()
-        ticker_price, total, currency = calculate_total(ticker=ticker, amount=amount, price=price)
-        ticker = ticker.upper()
         user_id = str(ctx.message.author.id)
         username = ctx.message.author.name
-        sell_complete = sell_position(session=session, user_id=user_id, username=username,
-                                      symbol=ticker, amount=amount, price=ticker_price)
-        if sell_complete:
-            embed = Embedder.embed(title=f"Successfully Sold ${ticker}",
-                                   message=f"{ticker} x {amount} @{ticker_price} {currency}\n"
-                                           f"`Total: ${'{:.2f}'.format(total)}  {currency}`")
-        else:
-            embed = Embedder.error("Check if you have enough positions to sell!")
+        ticker = ticker.upper()
+        sold_price, currency = sell_position(user_id=user_id, username=username,
+                                             symbol=ticker, amount=amount, price=price)
+        total = sold_price * amount
+        embed = Embedder.embed(title=f"Successfully Sold ${ticker}",
+                               message=f"{ticker} x {amount} @{format(sold_price, '.2f')} {currency}\n"
+                                       f"`Total: ${format(total, '.2f')} {currency}`")
         await ctx.send(embed=embed)
 
     @sell.error
@@ -61,7 +55,10 @@ class Positions(commands.Cog):
         if isinstance(error, commands.BadArgument):
             msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
         elif isinstance(error, commands.CommandInvokeError):
-            msg = "Invalid ticker."
+            if isinstance(error.original, NotEnoughPositionsToSell):
+                msg = "You don't have enough positions to sell!"
+            else:
+                msg = uncaught(error.original)
         else:
             msg = uncaught(error)
         await ctx.send(embed=Embedder.error(msg))
