@@ -1,69 +1,12 @@
 import os
+from typing import List
+import financelite
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
 import discord
 
-suffixes = ['.V', '.TO', '.NE']
 load_dotenv()
 token = os.getenv("RAPID-API-KEY")
-
-
-def live_stock_price(ticker):
-    """
-    :param ticker: str (the ticker of the stock you are looking for)
-    :return: datatype: numpy-float64 (the price of the ticker)
-    """
-    return round(get_live_price(ticker), 2)
-
-
-def getNews(ticker):
-    """
-    :param ticker: str (the ticker of the stock you are looking for)
-    :return: res: dict (where the dictionary contains the summaries and links)
-             titles: list (list of titles)
-    """
-
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/get-news"
-
-    querystring = {"category": ticker}
-
-    headers = {
-        'x-rapidapi-key': token,
-        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com"
-    }
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    # Transform the data into json so we can fetch the data we need easily.
-    data = response.json()
-    # The data we need is under the key result, but item is also a key to result.
-    news_json = data['items']['result']
-    # If the fetched results are empty, that means the data has to be invalid.
-    if len(news_json) == 0:
-        raise Exception("Invalid Entry, please try again.")
-
-    # The things that matter here are the links, summaries and the titles of the news articles.
-    # So we go through news_json to get the corresponding values and append them to a list.
-    # Limit the articles to 5.
-    links = []
-    summaries = []
-    titles = []
-    for key in news_json:
-        # If there are 2048 characters in a message, Discord can't show it so we have to check that.
-        # We just skip that article and go to the next article in the json.
-        if key['summary'] and len(key['summary']) > 2048:
-            continue
-        if key['summary'] and len(key['summary']) < 2048:
-            summaries.append(key['summary'])
-        if key['link']:
-            links.append(key['link'])
-        if key['title']:
-            titles.append(key['title'])
-        if len(links) == 5:
-            break
-
-    # Turn the two lists into a hash and then return titles and res.
-    res = dict(zip(summaries, links))
-    return res, titles
 
 
 def getMovers():
@@ -291,3 +234,8 @@ def humanize_number(value, fraction_point=1):
         return_value = "-" + return_value
 
     return return_value
+
+
+def camel_to_title(text: str) -> str:
+    formatted = re.sub("([a-z])([A-Z])", "\g<1> \g<2>", text).title()
+    return formatted

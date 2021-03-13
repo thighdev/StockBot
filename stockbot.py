@@ -6,8 +6,10 @@ from src.util.Embedder import *
 from src.util.SentryHelper import uncaught
 from src.positions import buy_position, sell_position, get_portfolio, NoPositionsException
 from src.database import Session, connect
+from financelite import *
+import pytz
+import dateparser
 import sentry_sdk
-import asyncio
 
 TOKEN = os.getenv("TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -27,71 +29,53 @@ async def movers(ctx):
     await ctx.send(embed=top_volume)
 
 
-@bot.command(
-    help="Requires two arguments, ticker and region. Default region used"
-         " is US. Example of command: !info BB CA or !info TSLA",
-    brief="Returns a market summary of the specified ticker.")
-async def info(ctx, arg1, arg2='US'):
-    keys = ['Opening Price', 'Current Price', 'Day High',
-            'Day Low', '52 Week High', '52 Week Low']
-    stock_details, name = getDetails(str(arg1), str(arg2))
-    embed = discord.Embed(title="Information on " + name, colour=Colour.green())
-    if len(stock_details) == 9:
-        for key, value in stock_details.items():
-            if key in keys:
-                embed.add_field(name=key, value="$" + value, inline=True)
-                continue
-            else:
-                embed.add_field(name=key, value=value, inline=True)
-        await ctx.send(embed=embed)
-
-    else:
-        for key, value in stock_details.items():
-            if key in keys:
-                embed.add_field(name=key, value="$" + value, inline=True)
-                continue
-            if key == 'Annual Div Rate':
-                embed.add_field(name=key, value="$" + value + " per share", inline=True)
-            else:
-                embed.add_field(name=key, value=value, inline=True)
+@bot.command()
+async def info(ctx, *args):
+    group = Group()
+    for arg in args:
+        group.add_ticker(arg)
+    cherrypicks = ['shortName', 'exchange', 'currency',
+                   'regularMarketPrice', 'regularMarketOpen', 'regularMarketDayRange',
+                   'regularMarketVolume', 'averageDailyVolume10Day', 'averageDailyVolume3Month',
+                   'regularMarketPreviousClose', 'fiftyDayAverage', 'fiftyTwoWeekRange'
+                   ]
+    group_info = group.get_quotes(cherrypicks=cherrypicks)
+    for i, stock_info in enumerate(group_info):
+        embed = discord.Embed(title=f"Information for {args[i].upper()}",
+                              colour=discord.Colour.blue())
+        for cherry in cherrypicks:
+            key = camel_to_title(cherry)
+            value = stock_info.get(cherry)
+            if isinstance(value, float):
+                value = format(value, '.2f')
+            if isinstance(value, int):
+                value = humanize_number(value)
+            embed.add_field(name=key, value=value)
         await ctx.send(embed=embed)
 
 
 @bot.command(
     help="Requires one argument, ticker. Example !news TSLA",
     brief="Returns recent news related to the specified ticker")
-async def news(ctx, arg1, *args):
-    res, titles = getNews(str(arg1))
-    i = 0
-    for key, value in res.items():
-        embed = discord.Embed(title=str(titles[i]), url=str(value),
-                              description=str(key),
-                              color=discord.Color.blue())
-        i += 1
-        await ctx.send(embed=embed)
+async def news(ctx, ticker: str, region: str = "US", lang: str = "en-US"):
+    items = News(region=region, lang=lang).get_news(ticker, count=9)
+    embed = discord.Embed(title=f"News for {ticker.upper()}", colour=discord.Colour.gold())
+    est = pytz.timezone('US/Eastern')
+    for i in items:
+        title = i.get("title")
+        date = i.get("published")
+        parsed_date = dateparser.parse(date).astimezone(est)
+        parsed_date = parsed_date.strftime("%b %d, %Y %-I:%M%p EST")
+        link = i.get("link")
+        embed.add_field(name=title, value=f"[{parsed_date}]({link})", inline=True)
+    await ctx.send(embed=embed)
 
 
-@bot.command(
-    help="Requires one argument ticker and one optional argument region (specifically for Canada). Example !live TSLA "
-         "or !live BB CA",
-    brief="Returns the live price of the ticker")
-async def live(ctx, arg1, *args):
-    if len(args) == 1 and args[0].upper() == 'CA':
-        currency = "CAD"
-        if ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
-            price = live_stock_price(str(arg1))
-            embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
-        else:
-            price, suffix = findSuffix(str(arg1))
-            embed = Embedder.embed(title=f"{str(arg1).upper()}{suffix}", message=f"${price} {currency}")
-    elif ('.V' in arg1.upper()) or ('.NE' in arg1.upper()) or ('.TO' in arg1.upper()):
-        currency = "CAD"
-        price = live_stock_price(str(arg1))
-        embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
-    else:
-        currency = "USD"
-        price = live_stock_price(str(arg1))
-        embed = Embedder.embed(title=f"{str(arg1).upper()}", message=f"${price} {currency}")
+@bot.command()
+async def live(ctx, ticker: str):
+    stock = Stock(ticker)
+    live_price, currency = stock.get_live()
+    embed = Embedder.embed(title=ticker.upper(), message=f"${format(live_price, '.2f')} {currency}")
     await ctx.send(embed=embed)
 
 
@@ -124,25 +108,25 @@ async def hist(ctx, arg1, *args):
 
         await ctx.send(embed=embed)
 
-
-@bot.command(
-    help="Requires two arguments, ticker and price. Example !alert TSLA 800",
-    brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
-)
-async def alert(ctx, ticker, price):
-    if float(live_stock_price(ticker) > float(price)):
-        while True:
-            print(live_stock_price(ticker))
-            if float(live_stock_price(ticker)) <= float(price):
-                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-                break
-            await asyncio.sleep(10)
-    else:
-        while True:
-            if float(live_stock_price(ticker)) >= float(price):
-                await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-                break
-            await asyncio.sleep(10)
+# TODO: this doesn't work, right
+# @bot.command(
+#     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
+#     brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
+# )
+# async def alert(ctx, ticker, price):
+#     if float(live_stock_price(ticker) > float(price)):
+#         while True:
+#             print(live_stock_price(ticker))
+#             if float(live_stock_price(ticker)) <= float(price):
+#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
+#                 break
+#             await asyncio.sleep(10)
+#     else:
+#         while True:
+#             if float(live_stock_price(ticker)) >= float(price):
+#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
+#                 break
+#             await asyncio.sleep(10)
 
 
 @bot.command()
@@ -204,11 +188,9 @@ async def portfolio(ctx, mobile=""):
 @info.error
 async def info_error(ctx, error):
     if isinstance(error, commands.CommandError):
-        msg = """
-        Came across an error while processing your request.
-        Check if your region corresponds to the proper exchange,
-        or re-check the ticker you used.
-        """
+        msg = error
+    elif isinstance(error, DataRequestException):
+        msg = "Invalid ticker(s). Please check if you have correct tickers."
     else:
         msg = uncaught(error)
     await ctx.send(embed=Embedder.error(msg))
@@ -217,7 +199,9 @@ async def info_error(ctx, error):
 @news.error
 async def news_error(ctx, error):
     if isinstance(error, commands.CommandError):
-        msg = 'Came across an error while processing your request.'
+        msg = "Came across an error while processing your request."
+    elif isinstance(error, NoNewsFoundException):
+        msg = "No news was found with this ticker."
     else:
         msg = uncaught(error)
     await ctx.send(embed=Embedder.error(msg))
@@ -236,13 +220,13 @@ async def live_error(ctx, error):
     await ctx.send(embed=Embedder.error(msg))
 
 
-@alert.error
-async def alert_error(ctx, error):
-    if isinstance(error, commands.CommandError):
-        msg = 'Came across an error while processing your request. Please check your ticker again.'
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
+# @alert.error # TODO: doesn't work for now
+# async def alert_error(ctx, error):
+#     if isinstance(error, commands.CommandError):
+#         msg = 'Came across an error while processing your request. Please check your ticker again.'
+#     else:
+#         msg = uncaught(error)
+#     await ctx.send(embed=Embedder.error(msg))
 
 
 @buy.error
