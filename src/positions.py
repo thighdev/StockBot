@@ -12,12 +12,22 @@ class NotEnoughPositionsToSell(Exception):
     pass
 
 
+class NoPositionsException(commands.CommandError):
+    pass
+
+
+class NotAmerican(Exception):
+    pass
+
+
 def sell_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     # TODO: maybe add cash attr for users
     session = Session()
+    sold_price, currency = Stock(symbol).get_live()
+    if currency not in ["USD", "CAD"]:
+        raise NotAmerican
+    sold_price = price if price else sold_price
     try:
-        sold_price, currency = Stock(symbol).get_live()
-        sold_price = price if price else sold_price
         symbol = get_symbol_or_create(session, symbol, currency)
         symbol_id = symbol[0].symbol_id
         user = get_user_or_create(session, user_id=user_id, username=username)
@@ -44,6 +54,8 @@ def sell_position(user_id: str, username: str, symbol: str, amount: int, price: 
 def buy_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     session = Session()
     bought_price, currency = Stock(ticker=symbol).get_live()
+    if currency not in ["USD", "CAD"]:
+        raise NotAmerican
     bought_price = price if price else bought_price
     try:
         symbol = get_symbol_or_create(session, symbol, currency)
@@ -196,7 +208,3 @@ def get_total_usd_cad(usd, cad):
     total_in_usd = usd + convert("CAD", "USD", cad)
     total_in_cad = cad + convert("USD", "CAD", usd)
     return total_in_usd, total_in_cad
-
-
-class NoPositionsException(commands.CommandError):
-    pass
