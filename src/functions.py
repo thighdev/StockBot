@@ -62,10 +62,6 @@ def get_movers() -> tuple:
     return gainers, losers, volume
 
 
-def is_cad(text):
-    return any([('.V' in text.upper()), ('.NE' in text.upper()), ('.TO' in text.upper())])
-
-
 def humanize_number(value: Union[int, float], fraction_point: int = 1) -> str:
     powers = [10 ** x for x in (12, 9, 6, 3, 0)]
     human_powers = ('T', 'B', 'M', 'K', '')
