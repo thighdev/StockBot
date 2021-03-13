@@ -175,11 +175,11 @@
         },
         "financelite": {
             "hashes": [
-                "sha256:2a1affa08a041ad5fb87482aea4c76e43da81a6e06dc2e23a5379e8e7f0d5c52",
-                "sha256:ef28c7491f776e605064f0cf26ed21c691b4e8531992fdf6fec655268e11c65c"
+                "sha256:4925eebbd412466516fcbdfccbb6c18eadef91bc348c998fdb6c247a53a29479",
+                "sha256:e13fbd836bccfc338b70dbe5bdfd2db495cfac4cd57d4c39ff70608a81a5ed16"
             ],
             "index": "pypi",
-            "version": "==0.1.2"
+            "version": "==0.1.3"
         },
         "forex-python": {
             "hashes": [
@@ -408,7 +408,7 @@
                 "sha256:c2974be1afa13b17f7ecd120d265d8b8cd324d536a231c3953ca872b68aba4af",
                 "sha256:d4cb4a5ef94b00c1073aed888b39646ce26cff3339cff7a3f1f1cc307bf50408"
             ],
-            "markers": "python_version < '4.0' and python_full_version >= '3.6.1'",
+            "markers": "python_version < '4' and python_full_version >= '3.6.1'",
             "version": "==0.2.5"
         },
         "pyquery": {
@@ -680,7 +680,7 @@
                 "sha256:1b465e494e3e0d8939b50680403e3aedaa2bc434b7d5af64dfd3c958d7f5ae80",
                 "sha256:de3eedaad74a2683334e282005cd8d7f22f4d55fa690a2a1020a416cb0a47e73"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
             "version": "==1.26.3"
         },
         "w3lib": {
