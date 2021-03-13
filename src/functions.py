@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Union, Tuple
 import financelite
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
@@ -9,7 +9,7 @@ load_dotenv()
 token = os.getenv("RAPID-API-KEY")
 
 
-def getMovers():
+def get_movers() -> tuple:
     """
     :return: Embedded details on the top 6 gainers, losers and volume in the US for the day.
     """
@@ -62,146 +62,6 @@ def getMovers():
     return gainers, losers, volume
 
 
-def getDetails(ticker, region):
-    """
-    :param ticker: str (the ticker of the stock you are looking for)
-    :param region: str (the regions, the valid regions are: US|BR|AU|CA|FR|DE|HK|IN|IT|ES|GB|SG)
-    :return: stock_details: dict (the relevant details about the stock)
-             name: str (the full name of the stock)
-    """
-
-    # Yahoo Finance requires Canadian stocks to have .TO at the end of the ticker e.g.
-    # SU.TO. So we automatically add .TO to the ticker if the region set is CA.
-    if region.upper() == "CA":
-        if ('.V' in ticker.upper()) or ('.NE' in ticker.upper()) or ('.TO' in ticker.upper()):
-            pass
-        else:
-            price, suffix = findSuffix(ticker)
-            ticker = ticker + suffix
-
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v2/get-summary"
-    querystring = {"symbol": ticker, "region": region}
-    headers = {
-        'x-rapidapi-key': token,
-        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com"
-    }
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    # Grab the response and turn it into json format.
-    data = response.json()
-    # Grabbing all the data within key price.
-    priceKey = data["price"]
-    # Assigning all the variables to the corresponding data that we need.
-    opening_price = priceKey["regularMarketOpen"]["fmt"]
-    curr_price = priceKey["regularMarketPrice"]["fmt"]
-    day_high = priceKey["regularMarketDayHigh"]["fmt"]
-    day_low = priceKey["regularMarketDayLow"]["fmt"]
-    percent_change = priceKey["regularMarketChangePercent"]["fmt"]
-    volume_today = priceKey["regularMarketVolume"]["fmt"]
-    mkt_cap = priceKey["marketCap"]["fmt"]
-    name = priceKey["longName"]
-    # currency = data["earnings"]["financialCurrency"]
-
-    # Grab the necessary data within summaryDetail, so 52 week high, 52 week low and potential dividends.
-    summaryDetail = data["summaryDetail"]
-    fifty_two_week_high = summaryDetail["fiftyTwoWeekHigh"]["fmt"]
-    fifty_two_week_low = summaryDetail["fiftyTwoWeekLow"]["fmt"]
-
-    # Place the details in a hash so we can iterate through it so we can put it into something.
-    stock_details = {'Opening Price': opening_price, 'Current Price': curr_price, 'Day High': day_high,
-                     'Day Low': day_low, 'Percent Change': percent_change, 'Volume': volume_today,
-                     'Mkt Cap': mkt_cap, '52 Week High': fifty_two_week_high, '52 Week Low': fifty_two_week_low}
-
-    # Not all stocks have dividends, so we have to consider that case.
-    if len(summaryDetail["trailingAnnualDividendYield"]) == 0:
-        return stock_details, name
-
-    # Otherwise we grab the dividend data as well.
-    else:
-        annual_div_yield = summaryDetail["trailingAnnualDividendYield"]["fmt"]
-        annual_div_rate = summaryDetail["trailingAnnualDividendRate"]["fmt"]
-        div_date = summaryDetail["exDividendDate"]["fmt"]
-        stock_details['Annual Div Yield'] = annual_div_yield
-        stock_details['Annual Div Rate'] = annual_div_rate
-        stock_details['Div Date'] = div_date
-
-        return stock_details, name
-
-
-def getHistoricalData(ticker, region, days):
-    """
-    :param ticker: str (the ticker of the stock you are looking for)
-    :param region: str (the region where the stock is traded)
-    :param days: int (the number of days to compare the current stock price to)
-    :return: tuple<float, float> (Value of difference between days in numerical and percentage representation)
-    """
-    # Yahoo Finance requires Canadian stocks to have .TO at the end of the ticker e.g.
-    # SU.TO. So we automatically add .TO to the ticker if the region set is CA.
-    if region.upper() == "CA":
-        if ('.V' in ticker.upper()) or ('.NE' in ticker.upper()) or ('.TO' in ticker.upper()):
-            pass
-        else:
-            price, suffix = findSuffix(ticker)
-            ticker = ticker + suffix
-
-    url = "https://apidojo-yahoo-finance-v1.p.rapidapi.com/stock/v3/get-historical-data"
-
-    querystring = {"symbol": ticker, "region": region}
-
-    headers = {
-        'x-rapidapi-key': token,
-        'x-rapidapi-host': "apidojo-yahoo-finance-v1.p.rapidapi.com",
-    }
-
-    # TODO: get stock's historical date so we don't have a null value - number of days could exceed the stock's age somehow
-    if int(days) > 200:
-        raise Exception("Value exceeds maximum number of days (200). Please enter a smaller value.")
-    elif int(days) < 1:
-        raise Exception("Invalid Entry. Value must be between 1 and 200. Please try again.")
-
-    response = requests.request("GET", url, headers=headers, params=querystring)
-    # Transform the data into json so we can fetch the data we need easily.
-    data = response.json()
-    # We get the data from prices on the given amount of days wanted from historical data
-    historicalData = data['prices'][int(days)]
-
-    # If the fetched results are empty, that means the data has to be invalid.
-    if len(historicalData) == 0:
-        raise Exception("Invalid Entry, please try again.")
-
-    current_data = get_live_price(ticker)
-
-    # Compare both data points and derive a monetary difference between the two in number and percentage values.
-    amountDiffNumerical = float(current_data) - float(historicalData['close'])
-    amountDiffPercentage = (amountDiffNumerical / float(historicalData['close'])) * 100
-
-    if is_cad(ticker):
-        currency = 'CAD'
-    else:
-        currency = 'USD'
-
-    stock_details = {
-        'PriceChange': round(amountDiffNumerical, 2),
-        'PriceChangePercentage': round(amountDiffPercentage, 2),
-        'Currency': currency
-    }
-
-    return stock_details
-
-
-# Recursively tries to find the associated suffix
-# for the corresponding stock in the TSX.
-def findSuffix(ticker, i=0):
-    try:
-        live_stock_price(ticker + suffixes[i])
-    except AssertionError or KeyError:
-        i = i + 1
-        if i > 3:
-            raise Exception
-        return findSuffix(ticker, i)
-    else:
-        return live_stock_price(ticker + suffixes[i]), suffixes[i]
-
-
 def is_cad(text):
     return any([('.V' in text.upper()), ('.NE' in text.upper()), ('.TO' in text.upper())])
 
@@ -216,7 +76,7 @@ def calculate_total(ticker: str, amount: int, price: float = None):
         return ticker_price, total, currency
 
 
-def humanize_number(value, fraction_point=1):
+def humanize_number(value: Union[int, float], fraction_point: int = 1) -> str:
     powers = [10 ** x for x in (12, 9, 6, 3, 0)]
     human_powers = ('T', 'B', 'M', 'K', '')
     is_negative = False

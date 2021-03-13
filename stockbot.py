@@ -23,7 +23,7 @@ bot = commands.Bot(command_prefix=prefix, help_command=PrettyHelp(no_category='C
     help="Requires no arguments, just checks for the top gainers, losses and volume in the US. e.g. !movers",
     brief="Returns the top gainers, losses and volume from the US.")
 async def movers(ctx):
-    day_gainers, day_losers, top_volume = getMovers()
+    day_gainers, day_losers, top_volume = get_movers()
     await ctx.send(embed=day_gainers)
     await ctx.send(embed=day_losers)
     await ctx.send(embed=top_volume)
@@ -54,6 +54,17 @@ async def info(ctx, *args):
         await ctx.send(embed=embed)
 
 
+@info.error
+async def info_error(ctx, error: Exception):
+    if isinstance(error, commands.CommandError):
+        msg = error
+    elif isinstance(error, DataRequestException):
+        msg = "Invalid ticker(s). Please check if you have correct tickers."
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
+
+
 @bot.command(
     help="Requires one argument, ticker. Example !news TSLA",
     brief="Returns recent news related to the specified ticker")
@@ -71,6 +82,17 @@ async def news(ctx, ticker: str, region: str = "US", lang: str = "en-US"):
     await ctx.send(embed=embed)
 
 
+@news.error
+async def news_error(ctx, error: Exception):
+    if isinstance(error, commands.CommandError):
+        msg = "Came across an error while processing your request."
+    elif isinstance(error, NoNewsFoundException):
+        msg = "No news was found with this ticker."
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
+
+
 @bot.command()
 async def live(ctx, ticker: str):
     stock = Stock(ticker)
@@ -79,54 +101,48 @@ async def live(ctx, ticker: str):
     await ctx.send(embed=embed)
 
 
-@bot.command(
-    help="Requires one argument ticker and one optional argument region (specifically for Canada) and one argument number of days. Example !hist TSLA 45"
-         "or !live BB CA 14",
-    brief="Returns info regarding increase or decrease in stock price in the last x days")
-async def hist(ctx, arg1, *args):
-    if args[0].isdigit():
-        # No region specified, default to US
-        stockResult = getHistoricalData(arg1, 'US', args[0])
-        marker = '' if stockResult['PriceChange'] < 0 else '+'
-        currency, pricediff, percentdiff = stockResult['Currency'], \
-                                           stockResult['PriceChange'], stockResult['PriceChangePercentage']
-        embed = Embedder.embed(title=f"{(arg1.upper())} Performance In The Last {str(args[0])} Days:",
-                               message=f"{marker}${pricediff:.2f} {currency} "
-                                       f"({marker}{percentdiff:.2f}%)")
-        await ctx.send(embed=embed)
-
+@live.error
+async def live_error(ctx, error: Exception):
+    if isinstance(error, commands.CommandInvokeError):
+        msg = """
+        Came across an error while processing your request.
+        Check if your region corresponds to the proper exchange,
+        or re-check the ticker you used.
+        """
     else:
-        # Region is specified, so there should be 2 arguments: region and number of days
-        suffix = findSuffix(arg1)[1]
-        stockResult = getHistoricalData(arg1, args[0].upper(), args[1])
-        marker = '' if stockResult['PriceChange'] < 0 else '+'
-        currency, pricediff, percentdiff = stockResult['Currency'], stockResult['PriceChange'], stockResult[
-            'PriceChangePercentage']
-        embed = Embedder.embed(title=f"{(arg1.upper())}{suffix} Performance In The Last {str(args[1])} Days:",
-                               message=f"{marker}${pricediff:.2f} {currency} "
-                                       f"({marker}{percentdiff:.2f}%)")
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
 
-        await ctx.send(embed=embed)
 
-# TODO: this doesn't work, right
-# @bot.command(
-#     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
-#     brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
-# )
-# async def alert(ctx, ticker, price):
-#     if float(live_stock_price(ticker) > float(price)):
-#         while True:
-#             print(live_stock_price(ticker))
-#             if float(live_stock_price(ticker)) <= float(price):
-#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-#                 break
-#             await asyncio.sleep(10)
-#     else:
-#         while True:
-#             if float(live_stock_price(ticker)) >= float(price):
-#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-#                 break
-#             await asyncio.sleep(10)
+@bot.command()
+async def hist(ctx, ticker: str, days: int):
+    stock = Stock(ticker)
+    data, currency = stock.get_hist(days=days)
+    diff = data[-1] - data[0]
+    is_positive = ""
+    if diff < 0:
+        colour = discord.Colour.red()
+    else:
+        is_positive = "+"
+        colour = discord.Colour.green()
+    diff_percent = diff / data[0] * 100
+    embed = discord.Embed(title=f"Historical change for {ticker.upper()} within {days} days",
+                          description=f"{is_positive}{format(diff, '.2f')} {currency} "
+                                      f"({is_positive}{format(diff_percent, '.2f')}%)",
+                          colour=colour)
+    await ctx.send(embed=embed)
+
+
+@hist.error
+async def hist_error(ctx, error: Exception):
+    if isinstance(error, ValueError) or isinstance(error, commands.BadArgument):
+        msg = "Days should be an integer larger than 1"
+    elif isinstance(error, commands.MissingRequiredArgument):
+        msg = "`!hist [ticker (KBO)] [days (15)]`"
+    else:
+        msg = error
+    await ctx.send(embed=Embedder.error(msg))
+
 
 
 @bot.command()
@@ -148,6 +164,19 @@ async def buy(ctx, ticker: str, amount: int, price: float = None):
     await ctx.send(embed=embed)
 
 
+@buy.error
+async def buy_error(ctx, error: Exception):
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
+    elif isinstance(error, commands.CommandInvokeError):
+        msg = "Invalid ticker."
+    elif isinstance(error, commands.MissingRequiredArgument):
+        msg = "Missing arguments;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
+
+
 @bot.command()
 async def sell(ctx, ticker: str, amount: int, price: float = None):
     session = Session()
@@ -166,8 +195,19 @@ async def sell(ctx, ticker: str, amount: int, price: float = None):
     await ctx.send(embed=embed)
 
 
+@sell.error
+async def sell_error(ctx, error: Exception):
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
+    elif isinstance(error, commands.CommandInvokeError):
+        msg = "Invalid ticker."
+    else:
+        msg = uncaught(error)
+    await ctx.send(embed=Embedder.error(msg))
+
+
 @bot.command()  # TODO: add profit/loss for portfolio summary
-async def portfolio(ctx, mobile=""):
+async def portfolio(ctx, mobile: str = ""):
     if mobile and mobile not in ("m", "mobile"):
         raise discord.ext.commands.BadArgument
     session = Session()
@@ -185,39 +225,36 @@ async def portfolio(ctx, mobile=""):
         await ctx.send(Embedder.error(""))
 
 
-@info.error
-async def info_error(ctx, error):
-    if isinstance(error, commands.CommandError):
-        msg = error
-    elif isinstance(error, DataRequestException):
-        msg = "Invalid ticker(s). Please check if you have correct tickers."
+@portfolio.error
+async def portfolio_error(ctx, error: Exception):
+    if isinstance(error, commands.BadArgument):
+        msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
+    elif isinstance(error, NoPositionsException):
+        msg = "No position was found with the user!\nTry `!buy` command first to add positions."
     else:
         msg = uncaught(error)
     await ctx.send(embed=Embedder.error(msg))
 
 
-@news.error
-async def news_error(ctx, error):
-    if isinstance(error, commands.CommandError):
-        msg = "Came across an error while processing your request."
-    elif isinstance(error, NoNewsFoundException):
-        msg = "No news was found with this ticker."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
-@live.error
-async def live_error(ctx, error):
-    if isinstance(error, commands.CommandInvokeError):
-        msg = """
-        Came across an error while processing your request.
-        Check if your region corresponds to the proper exchange,
-        or re-check the ticker you used.
-        """
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
+# TODO: this doesn't work for now
+# @bot.command(
+#     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
+#     brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
+# )
+# async def alert(ctx, ticker, price):
+#     if float(live_stock_price(ticker) > float(price)):
+#         while True:
+#             print(live_stock_price(ticker))
+#             if float(live_stock_price(ticker)) <= float(price):
+#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
+#                 break
+#             await asyncio.sleep(10)
+#     else:
+#         while True:
+#             if float(live_stock_price(ticker)) >= float(price):
+#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
+#                 break
+#             await asyncio.sleep(10)
 
 
 # @alert.error # TODO: doesn't work for now
@@ -229,43 +266,8 @@ async def live_error(ctx, error):
 #     await ctx.send(embed=Embedder.error(msg))
 
 
-@buy.error
-async def buy_error(ctx, error):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
-    elif isinstance(error, commands.CommandInvokeError):
-        msg = "Invalid ticker."
-    elif isinstance(error, commands.MissingRequiredArgument):
-        msg = "Missing arguments;\n`!buy [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
-@sell.error
-async def sell_error(ctx, error):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
-    elif isinstance(error, commands.CommandInvokeError):
-        msg = "Invalid ticker."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
-@portfolio.error
-async def portfolio_error(ctx, error):
-    if isinstance(error, commands.BadArgument):
-        msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
-    elif isinstance(error, NoPositionsException):
-        msg = "No position was found with the user!\nTry `!buy` command first to add positions."
-    else:
-        msg = uncaught(error)
-    await ctx.send(embed=Embedder.error(msg))
-
-
 @bot.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx, error: Exception):
     if isinstance(error, commands.CommandNotFound):
         return await ctx.send(embed=Embedder.error("Command does not exist."))
     elif hasattr(ctx.command, "on_error"):
