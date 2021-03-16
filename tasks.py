@@ -1,6 +1,9 @@
 import invoke
 
-@invoke.task(help={"arg": "(Takes docker-compose arguments. Use quotes for multiple arguments.)"})
+
+@invoke.task(
+    help={"arg": "(Takes docker-compose arguments. Use quotes for multiple arguments.)"}
+)
 def compose(c, arg):
     """
     Acts as docker-compose

@@ -13,7 +13,9 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 SENTRY_DSN = os.getenv("SENTRY_DSN")
 dev_prefix = os.getenv("DEV_PREFIX")
 prefix = "!" if not dev_prefix else dev_prefix
-bot = commands.Bot(command_prefix=prefix, help_command=PrettyHelp(no_category='Commands'))
+bot = commands.Bot(
+    command_prefix=prefix, help_command=PrettyHelp(no_category="Commands")
+)
 
 
 @bot.event
@@ -29,14 +31,12 @@ async def on_command_error(ctx, error: Exception):
 
 @bot.event
 async def on_ready():
-    sentry_sdk.init(
-        SENTRY_DSN,
-        traces_sample_rate=1.0
-    )
+    sentry_sdk.init(SENTRY_DSN, traces_sample_rate=1.0)
     connect(DATABASE_URL)
     print("We are online!")
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
+
 
 bot.add_cog(Positions(bot))
 bot.add_cog(Information(bot))

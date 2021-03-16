@@ -12,7 +12,8 @@ class Information(commands.Cog):
 
     @commands.command(
         help="Requires no arguments, just checks for the top gainers, losses and volume in the US. e.g. !movers",
-        brief="Returns the top gainers, losses and volume from the US.")
+        brief="Returns the top gainers, losses and volume from the US.",
+    )
     async def movers(self, ctx):
         day_gainers, day_losers, top_volume = get_movers()
         await ctx.send(embed=day_gainers)
@@ -24,24 +25,34 @@ class Information(commands.Cog):
         group = Group()
         for arg in args:
             group.add_ticker(arg)
-        cherrypicks = ['shortName', 'exchange', 'currency',
-                       'regularMarketPrice', 'regularMarketOpen', 'regularMarketDayRange',
-                       'regularMarketVolume', 'averageDailyVolume10Day', 'averageDailyVolume3Month',
-                       'regularMarketPreviousClose', 'fiftyDayAverage', 'fiftyTwoWeekRange'
-                       ]
+        cherrypicks = [
+            "shortName",
+            "exchange",
+            "currency",
+            "regularMarketPrice",
+            "regularMarketOpen",
+            "regularMarketDayRange",
+            "regularMarketVolume",
+            "averageDailyVolume10Day",
+            "averageDailyVolume3Month",
+            "regularMarketPreviousClose",
+            "fiftyDayAverage",
+            "fiftyTwoWeekRange",
+        ]
         try:
             group_info = group.get_quotes(cherrypicks=cherrypicks)
         except DataRequestException:
             msg = "Invalid ticker(s). Please check if you have correct tickers."
             return await ctx.send(embed=Embedder.error(msg))
         for i, stock_info in enumerate(group_info):
-            embed = discord.Embed(title=f"Information for {args[i].upper()}",
-                                  colour=discord.Colour.blue())
+            embed = discord.Embed(
+                title=f"Information for {args[i].upper()}", colour=discord.Colour.blue()
+            )
             for cherry in cherrypicks:
                 key = camel_to_title(cherry)
                 value = stock_info.get(cherry)
                 if isinstance(value, float):
-                    value = format(value, '.2f')
+                    value = format(value, ".2f")
                 if isinstance(value, int):
                     value = humanize_number(value)
                 embed.add_field(name=key, value=value)
@@ -49,14 +60,19 @@ class Information(commands.Cog):
 
     @commands.command(
         help="Requires one argument, ticker. Example !news TSLA",
-        brief="Returns recent news related to the specified ticker")
+        brief="Returns recent news related to the specified ticker",
+    )
     async def news(self, ctx, ticker: str, region: str = "US", lang: str = "en-US"):
         try:
             items = News(region=region, lang=lang).get_news(ticker, count=9)
         except NoNewsFoundException:
-            return await ctx.send(embed=Embedder.error("No news was found with this ticker"))
-        embed = discord.Embed(title=f"News for {ticker.upper()}", colour=discord.Colour.gold())
-        est = pytz.timezone('US/Eastern')
+            return await ctx.send(
+                embed=Embedder.error("No news was found with this ticker")
+            )
+        embed = discord.Embed(
+            title=f"News for {ticker.upper()}", colour=discord.Colour.gold()
+        )
+        est = pytz.timezone("US/Eastern")
         for i in items:
             title = i.get("title")
             date = i.get("published")
@@ -72,9 +88,13 @@ class Information(commands.Cog):
         try:
             live_price, currency = stock.get_live()
         except DataRequestException as e:
-            return await ctx.send(embed=Embedder.error(f"{str(e).upper()} is not a valid ticker"))
+            return await ctx.send(
+                embed=Embedder.error(f"{str(e).upper()} is not a valid ticker")
+            )
 
-        embed = Embedder.embed(title=ticker.upper(), message=f"${format(live_price, '.2f')} {currency}")
+        embed = Embedder.embed(
+            title=ticker.upper(), message=f"${format(live_price, '.2f')} {currency}"
+        )
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -89,10 +109,12 @@ class Information(commands.Cog):
             is_positive = "+"
             colour = discord.Colour.green()
         diff_percent = diff / data[0] * 100
-        embed = discord.Embed(title=f"Historical change for {ticker.upper()} within {days} days",
-                              description=f"{is_positive}{format(diff, '.2f')} {currency} "
-                                          f"({is_positive}{format(diff_percent, '.2f')}%)",
-                              colour=colour)
+        embed = discord.Embed(
+            title=f"Historical change for {ticker.upper()} within {days} days",
+            description=f"{is_positive}{format(diff, '.2f')} {currency} "
+            f"({is_positive}{format(diff_percent, '.2f')}%)",
+            colour=colour,
+        )
         await ctx.send(embed=embed)
 
     @hist.error
@@ -104,6 +126,7 @@ class Information(commands.Cog):
         else:
             msg = error
         await ctx.send(embed=Embedder.error(msg))
+
 
 # TODO: this doesn't work for now
 # @bot.command(
