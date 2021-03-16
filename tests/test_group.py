@@ -1,4 +1,10 @@
-from financelite import Group, Stock, ItemNotValidException, TickerNotInGroupException, DataRequestException
+from financelite import (
+    Group,
+    Stock,
+    ItemNotValidException,
+    TickerNotInGroupException,
+    DataRequestException,
+)
 import pytest
 
 gme = Stock("gme")
