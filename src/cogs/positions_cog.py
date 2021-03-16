@@ -14,13 +14,18 @@ class Positions(commands.Cog):
         user_id = str(ctx.message.author.id)
         username = ctx.message.author.name
         ticker = ticker.upper()
-        bought_price, currency = buy_position(
-            user_id=user_id,
-            username=username,
-            symbol=ticker,
-            amount=amount,
-            price=price,
-        )
+        try:
+            bought_price, currency = buy_position(
+                user_id=user_id,
+                username=username,
+                symbol=ticker,
+                amount=amount,
+                price=price,
+            )
+        except NotAmerican:
+            return await ctx.send(
+                embed=Embedder.error("Currently USD and CAD stocks are supported")
+            )
         if bought_price:
             total = bought_price * amount
             embed = Embedder.embed(
@@ -47,18 +52,23 @@ class Positions(commands.Cog):
         user_id = str(ctx.message.author.id)
         username = ctx.message.author.name
         ticker = ticker.upper()
-        sold_price, currency = sell_position(
-            user_id=user_id,
-            username=username,
-            symbol=ticker,
-            amount=amount,
-            price=price,
-        )
+        try:
+            sold_price, currency = sell_position(
+                user_id=user_id,
+                username=username,
+                symbol=ticker,
+                amount=amount,
+                price=price,
+            )
+        except NotAmerican:
+            return await ctx.send(
+                embed=Embedder.error("Currently USD and CAD stocks are supported")
+            )
         total = sold_price * amount
         embed = Embedder.embed(
             title=f"Successfully Sold ${ticker}",
             message=f"{ticker} x {amount} @{format(sold_price, '.2f')} {currency}\n"
-            f"`Total: ${format(total, '.2f')} {currency}`",
+            f"`Total: {format(total, '.2f')} {currency}`",
         )
         await ctx.send(embed=embed)
 

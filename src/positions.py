@@ -17,10 +17,16 @@ class NoPositionsException(commands.CommandError):
     pass
 
 
+class NotAmerican(Exception):
+    pass
+
+
 def sell_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     # TODO: maybe add cash attr for users
     session = Session()
     sold_price, currency = Stock(symbol).get_live()
+    if currency not in ["USD", "CAD"]:
+        raise NotAmerican
     sold_price = price if price else sold_price
     try:
         symbol = get_symbol_or_create(session, symbol, currency)
@@ -51,6 +57,8 @@ def sell_position(user_id: str, username: str, symbol: str, amount: int, price: 
 def buy_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     session = Session()
     bought_price, currency = Stock(ticker=symbol).get_live()
+    if currency not in ["USD", "CAD"]:
+        raise NotAmerican
     bought_price = price if price else bought_price
     try:
         symbol = get_symbol_or_create(session, symbol, currency)
@@ -234,7 +242,7 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                     "P/L (%)",
                     "Currency",
                 ],
-                disable_numparse=True,
+                disable_numparse=True
             )
             if not mobile
             else pf_list
@@ -254,10 +262,7 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                     ]
                 )
             currencies_summary = tabulate(
-                currencies_summary,
-                headers=["Total in Currency", "Total Value", "P/L (%)"],
-                stralign="left",
-                numalign="left",
+                currencies_summary, headers=["Total in Currency", "Total Value", "P/L (%)"], stralign="left", numalign="left"
             )
             summary = tabulate(
                 [
@@ -266,9 +271,7 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                         f"{two_decimal(total_pl)} ({two_decimal(total_pl_percent)}%)",
                     ]
                 ],
-                headers=[f"Total in {main}", f"Total P/L in {main} (%)"],
-                stralign="left",
-                numalign="left",
+                headers=[f"Total in {main}", f"Total P/L in {main} (%)"], stralign="left", numalign="left"
             )
         else:
             currencies_summary = discord.Embed(title="Total value in Currencies")
