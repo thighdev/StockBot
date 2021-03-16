@@ -6,6 +6,7 @@ from discord.ext import commands
 from src.functions import get_live_price
 from tabulate import tabulate
 from forex_python.converter import CurrencyRates
+from typing import List
 
 
 class NotEnoughPositionsToSell(Exception):
@@ -16,23 +17,19 @@ class NoPositionsException(commands.CommandError):
     pass
 
 
-class NotAmerican(Exception):
-    pass
-
-
 def sell_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     # TODO: maybe add cash attr for users
     session = Session()
     sold_price, currency = Stock(symbol).get_live()
-    if currency not in ["USD", "CAD"]:
-        raise NotAmerican
     sold_price = price if price else sold_price
     try:
         symbol = get_symbol_or_create(session, symbol, currency)
         symbol_id = symbol[0].symbol_id
         user = get_user_or_create(session, user_id=user_id, username=username)
         user_id = user[0].id
-        existing = get_existing_position(session=session, user_id=user_id, symbol_id=symbol_id)
+        existing = get_existing_position(
+            session=session, user_id=user_id, symbol_id=symbol_id
+        )
         if existing:
             ex_total, ex_amount = existing.total_price, existing.amount
             if ex_amount < amount:
@@ -54,8 +51,6 @@ def sell_position(user_id: str, username: str, symbol: str, amount: int, price: 
 def buy_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     session = Session()
     bought_price, currency = Stock(ticker=symbol).get_live()
-    if currency not in ["USD", "CAD"]:
-        raise NotAmerican
     bought_price = price if price else bought_price
     try:
         symbol = get_symbol_or_create(session, symbol, currency)
@@ -63,7 +58,9 @@ def buy_position(user_id: str, username: str, symbol: str, amount: int, price: f
         user = get_user_or_create(session, user_id=user_id, username=username)
         user_id = user[0].id
         ex_total, ex_amount = 0, 0
-        existing = get_existing_position(session=session, user_id=user_id, symbol_id=symbol_id)
+        existing = get_existing_position(
+            session=session, user_id=user_id, symbol_id=symbol_id
+        )
         if existing:
             ex_total, ex_amount = existing.total_price, existing.amount
         new_total_price = float(ex_total + bought_price * amount)
@@ -74,9 +71,13 @@ def buy_position(user_id: str, username: str, symbol: str, amount: int, price: f
             existing.amount = new_amount
             existing.average_price = new_average_price
         else:
-            position_row = db.Positions(user_id=user_id, symbol_id=symbol_id,
-                                        total_price=new_total_price, average_price=new_average_price,
-                                        amount=new_amount)
+            position_row = db.Positions(
+                user_id=user_id,
+                symbol_id=symbol_id,
+                total_price=new_total_price,
+                average_price=new_average_price,
+                amount=new_amount,
+            )
             session.add(position_row)
         return bought_price, currency
     finally:
@@ -84,111 +85,235 @@ def buy_position(user_id: str, username: str, symbol: str, amount: int, price: f
         session.close()
 
 
-def get_portfolio(session, user_id: str, username: str, mobile: bool):
+class PortfolioCalculator:
+    def __init__(self, main_currency: str):
+        self.main_currency = main_currency
+        self.live_total = float()
+        self.average_total = float()
+        self.live_currencies_total = dict()
+        self.average_currencies_total = dict()
+
+    @staticmethod
+    def _forex(init: str, final: str, value: float):
+        return CurrencyRates().convert(base_cur=init, dest_cur=final, amount=value)
+
+    @staticmethod
+    def _accumulate_or_create(data: dict, key: str, value: float, amount: int):
+        if data.get(key):
+            data[key] += value * amount
+        else:
+            data[key] = value * amount
+
+    def add_data(self, currency: str, live: float, average: float, amount: int):
+        self.live_total += self._to_currency(currency=currency, value=live) * amount
+        self.average_total += (
+            self._to_currency(currency=currency, value=average) * amount
+        )
+        self._accumulate_or_create(
+            data=self.live_currencies_total, key=currency, value=live, amount=amount
+        )
+        self._accumulate_or_create(
+            data=self.average_currencies_total,
+            key=currency,
+            value=average,
+            amount=amount,
+        )
+
+    def convert_all(self, data: dict, currency: str) -> float:
+        total = float()
+        for key, value in data.items():
+            if key != currency:
+                total += self._forex(init=key, final=currency, value=value)
+                continue
+            total += value
+        return total
+
+    def _to_currency(self, currency: str, value: float) -> float:
+        return self._forex(init=currency, final=self.main_currency, value=value)
+
+    def get_total_in_currencies(self, data: dict) -> dict:
+        converted = dict()
+        for key, value in data.items():
+            converted[key] = self.convert_all(data=data, currency=key)
+        return converted
+
+    @property
+    def total_live_in_currencies(self) -> dict:
+        return self.get_total_in_currencies(data=self.live_currencies_total)
+
+    @property
+    def total_average_in_currencies(self) -> dict:
+        return self.get_total_in_currencies(data=self.average_currencies_total)
+
+    @staticmethod
+    def calculate_pl(live: float, average: float) -> tuple:
+        pl = live - average
+        pl_percent = (pl / average) * 100
+        return pl, pl_percent
+
+    @property
+    def total_pl(self) -> tuple:
+        return self.calculate_pl(live=self.live_total, average=self.average_total)
+
+    @property
+    def total_pl_currencies(self) -> dict:
+        pl = dict()
+        for key, value in self.total_live_in_currencies.items():
+            live = value
+            average = self.total_average_in_currencies.get(key)
+            pl[key] = self.calculate_pl(live=live, average=average)
+        return pl
+
+
+def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
+    session = Session()
     try:
         user = get_user_or_create(session=session, user_id=user_id, username=username)
         user_id = user[0].id
         positions = session.query(db.Positions).filter_by(user_id=user_id).all()
         if not positions:
             raise NoPositionsException
-        portfolio = discord.Embed(title=f"{username}'s Portfolio", colour=discord.Colour.green()) if mobile else []
-        portfolio_total_usd = 0
-        portfolio_total_cad = 0
-        average_total_usd = 0
-        average_total_cad = 0
-        for pos in positions:
-            symbol_id = pos.symbol_id
-            symbol = session.query(db.Symbols).filter_by(symbol_id=symbol_id).one().symbol
-            is_usd = pos.is_usd
-            currency = "USD" if is_usd else "CAD"
-            amount = pos.amount
-            average_price = pos.average_price
-            live_price = get_live_price(symbol)
-            live_total_price = amount * live_price
-            original_total_price = pos.total_price
-            current_total_price = live_price * amount
-            pl = live_total_price - original_total_price
-            pl_percent = ((live_price - average_price) / average_price) * 100
-            if is_usd:
-                portfolio_total_usd += current_total_price
-                average_total_usd += average_price * amount
+        portfolio = PortfolioCalculator(main)
+        pf_list = (
+            list() if not mobile else discord.Embed(title=f"{username}'s Portfolio")
+        )
+        for item in positions:
+            symbol = session.query(db.Symbols).filter_by(symbol_id=item.symbol_id).one()
+            currency = symbol.currency
+            live = Stock(symbol.symbol).get_live()[0]
+            average = item.average_price
+            amount = item.amount
+            pl, pl_percent = PortfolioCalculator.calculate_pl(
+                live=live * amount, average=average * amount
+            )
+            pl = two_decimal(pl)
+            pl_percent = two_decimal(pl_percent)
+            portfolio.add_data(
+                currency=currency, live=live, average=average, amount=amount
+            )
+            symbol = symbol.symbol
+            if live > average:
+                symbol = "+" + symbol
+                pl = "+" + pl
+                pl_percent = f"+{pl_percent}"
+            elif average > live:
+                symbol = "-" + symbol
             else:
-                portfolio_total_cad += current_total_price
-                average_total_cad += average_price * amount
-            positive = "+" if pl > 0 else ""
-            pl = positive + neg_zero_handler(two_decimal(pl))
-            pl_percent = positive + f"{neg_zero_handler(two_decimal(pl_percent))}%"
-            average_price = two_decimal(average_price)
-            current_total_price = two_decimal(current_total_price)
+                pass
             if mobile:
-                portfolio.add_field(name=f"**{symbol}**",
-                                    value=f"> Amount: {amount}\n"
-                                          f"> Average Price: {average_price}\n"
-                                          f"> Total: {current_total_price}\n"
-                                          f"> P/L (%): {pl} ({pl_percent})\n"
-                                          f"> Currency: {currency}")
+                pf_list.add_field(
+                    name=f"**{symbol}**",
+                    value=f"> Amount: x {amount}\n"
+                    f"> Average Price: {two_decimal(average)}\n"
+                    f"> Live Price: {two_decimal(live)}\n"
+                    f"> Total: {two_decimal(live * amount)}\n"
+                    f"> P/L (%): {pl} ({pl_percent}%)\n"
+                    f"> Currency: {currency}",
+                )
             else:
-                portfolio.append([symbol,
-                                  f"x {amount}",
-                                  average_price,
-                                  current_total_price,
-                                  f"{pl} ({pl_percent})",
-                                  currency])
-        total_in_usd, total_in_cad = get_total_usd_cad(portfolio_total_usd, portfolio_total_cad)
-        original_in_usd, original_in_cad = get_total_usd_cad(average_total_usd, average_total_cad)
-        pl_usd = total_in_usd - original_in_usd
-        pl_cad = total_in_cad - original_in_cad
-        pl_percent_in_usd = two_decimal((pl_usd / original_in_usd) * 100)
-        pl_percent_in_cad = two_decimal((pl_cad / original_in_cad) * 100)
-        portfolio_total_usd = two_decimal(portfolio_total_usd)
-        portfolio_total_cad = two_decimal(portfolio_total_cad)
-        positive = "+" if pl_usd > 0 or pl_cad > 0 else ""
-        portfolio_total = [[portfolio_total_usd,
-                            portfolio_total_cad,
-                            two_decimal(total_in_usd),
-                            two_decimal(total_in_cad),
-                            f"{positive}{two_decimal(pl_usd)} ({positive}{pl_percent_in_usd}%)",
-                            f"{positive}{two_decimal(pl_cad)} ({positive}{pl_percent_in_cad}%)"
-                            ]]
-        if mobile:
-            portfolio_total_mobile = discord.Embed(title=f"{username}'s Portfolio Summary",
-                                                   colour=discord.Colour.green())
-            portfolio_total_mobile.add_field(name="Total USD", value=portfolio_total_usd)
-            portfolio_total_mobile.add_field(name="Total CAD", value=portfolio_total_cad)
-            portfolio_total_mobile.add_field(name="Total in USD", value=two_decimal(total_in_usd))
-            portfolio_total_mobile.add_field(name="Total in CAD", value=two_decimal(total_in_cad))
-            portfolio_total_mobile.add_field(name="P/L in USD",
-                                             value=f"{positive}{two_decimal(pl_usd)} ({positive}{pl_percent_in_usd}%)")
-            portfolio_total_mobile.add_field(name="P/L in CAD",
-                                             value=f"{positive}{two_decimal(pl_cad)} ({positive}{pl_percent_in_cad}%)")
+                pf_list.append(
+                    [
+                        symbol,
+                        f"x {amount}",
+                        two_decimal(average),
+                        two_decimal(live),
+                        two_decimal(live * amount),
+                        f"{pl} ({pl_percent}%)",
+                        currency,
+                    ]
+                )
+        portfolio_table = (
+            tabulate(
+                pf_list,
+                headers=[
+                    "Symbol",
+                    "Amount",
+                    "Average Price",
+                    "Live Price",
+                    "Total Value",
+                    "P/L (%)",
+                    "Currency",
+                ],
+                disable_numparse=True,
+            )
+            if not mobile
+            else pf_list
+        )
 
-            return portfolio, portfolio_total_mobile
-
+        total = portfolio.live_total
+        total_pl, total_pl_percent = portfolio.total_pl
+        if not mobile:
+            currencies_summary = []
+            for key, value in portfolio.total_live_in_currencies.items():
+                pl, pl_percent = portfolio.total_pl_currencies.get(key)
+                currencies_summary.append(
+                    [
+                        key,
+                        two_decimal(value),
+                        f"{two_decimal(pl)} ({two_decimal(pl_percent)}%)",
+                    ]
+                )
+            currencies_summary = tabulate(
+                currencies_summary,
+                headers=["Total in Currency", "Total Value", "P/L (%)"],
+                stralign="left",
+                numalign="left",
+            )
+            summary = tabulate(
+                [
+                    [
+                        two_decimal(total),
+                        f"{two_decimal(total_pl)} ({two_decimal(total_pl_percent)}%)",
+                    ]
+                ],
+                headers=[f"Total in {main}", f"Total P/L in {main} (%)"],
+                stralign="left",
+                numalign="left",
+            )
         else:
-            portfolio_table = tabulate(portfolio,
-                                       headers=["Symbol", "Amount", "Average", "Total", "P/L (%)", "Currency"],
-                                       disable_numparse=True)
-            portfolio_total_table = tabulate(portfolio_total,
-                                             headers=["Total USD", "Total CAD", "Total in USD", "Total in CAD",
-                                                      "P/L in USD", "P/L in CAD"],
-                                             disable_numparse=True)
-            return portfolio_table, portfolio_total_table
+            currencies_summary = discord.Embed(title="Total value in Currencies")
+            for key, value in portfolio.total_live_in_currencies.items():
+                pl, pl_percent = portfolio.total_pl_currencies.get(key)
+                currencies_summary.add_field(
+                    name=f"**{key}**",
+                    value=f"> Total: {value}\n"
+                    f"> P/L (%): {two_decimal(pl)} ({two_decimal(pl_percent)}%)",
+                )
+            summary = discord.Embed(title=f"Total value in {main}")
+            summary.add_field(
+                name=f"{main}",
+                value=f"> Total: {two_decimal(total)}\n"
+                f"> P/L (%): {two_decimal(total_pl)} ({two_decimal(total_pl_percent)}%)",
+            )
+        return portfolio_table, currencies_summary, summary
     finally:
         session.close()
 
 
 def get_symbol_or_create(session, symbol: str, currency: str):
     symbol_default = {"symbol": symbol.upper(), "currency": currency}
-    return db.get_or_create(session=session, model=db.Symbols, defaults=symbol_default, symbol=symbol)
+    return db.get_or_create(
+        session=session, model=db.Symbols, defaults=symbol_default, symbol=symbol
+    )
 
 
 def get_user_or_create(session, user_id: str, username: str):
     user_default = {"user_id": f"{user_id}", "username": username}
-    return db.get_or_create(session=session, model=db.Users, defaults=user_default, user_id=user_id, username=username)
+    return db.get_or_create(
+        session=session,
+        model=db.Users,
+        defaults=user_default,
+        user_id=user_id,
+        username=username,
+    )
 
 
 def get_existing_position(session, user_id, symbol_id: int):
-    existing = session.query(db.Positions).filter_by(user_id=user_id, symbol_id=symbol_id).first()
+    existing = (
+        session.query(db.Positions)
+        .filter_by(user_id=user_id, symbol_id=symbol_id)
+        .first()
+    )
     return existing
 
 
@@ -201,7 +326,7 @@ def neg_zero_handler(neg_zero):
 
 
 def two_decimal(number: float):
-    return format(number, '.2f')
+    return format(number, ".2f")
 
 
 def get_total_usd_cad(usd, cad):

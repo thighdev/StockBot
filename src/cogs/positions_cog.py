@@ -3,7 +3,6 @@ from src.util.SentryHelper import uncaught
 from src.util.Embedder import Embedder
 from src.positions import *
 from src.functions import *
-from src.database import Session
 
 
 class Positions(commands.Cog):
@@ -15,17 +14,20 @@ class Positions(commands.Cog):
         user_id = str(ctx.message.author.id)
         username = ctx.message.author.name
         ticker = ticker.upper()
-        try:
-            bought_price, currency = buy_position(user_id=user_id, username=username,
-                                                  symbol=ticker, amount=amount,
-                                                  price=price)
-        except NotAmerican:
-            return await ctx.send(embed=Embedder.error("Currently USD and CAD stocks are supported"))
+        bought_price, currency = buy_position(
+            user_id=user_id,
+            username=username,
+            symbol=ticker,
+            amount=amount,
+            price=price,
+        )
         if bought_price:
             total = bought_price * amount
-            embed = Embedder.embed(title=f"Successfully bought {ticker}",
-                                   message=f"{ticker} x {amount} @{format(bought_price, '.2f')} {currency}\n"
-                                           f"`Total: ${format(total, '.2f')} {currency}`")
+            embed = Embedder.embed(
+                title=f"Successfully bought {ticker}",
+                message=f"{ticker} x {amount} @{format(bought_price, '.2f')} {currency}\n"
+                f"`Total: ${format(total, '.2f')} {currency}`",
+            )
         else:
             embed = Embedder.error("Something went wrong.")
         await ctx.send(embed=embed)
@@ -46,14 +48,23 @@ class Positions(commands.Cog):
         username = ctx.message.author.name
         ticker = ticker.upper()
         try:
-            sold_price, currency = sell_position(user_id=user_id, username=username,
-                                                 symbol=ticker, amount=amount, price=price)
+            sold_price, currency = sell_position(
+                user_id=user_id,
+                username=username,
+                symbol=ticker,
+                amount=amount,
+                price=price,
+            )
         except NotAmerican:
-            return await ctx.send(embed=Embedder.error("Currently USD and CAD stocks are supported"))
+            return await ctx.send(
+                embed=Embedder.error("Currently USD and CAD stocks are supported")
+            )
         total = sold_price * amount
-        embed = Embedder.embed(title=f"Successfully Sold ${ticker}",
-                               message=f"{ticker} x {amount} @{format(sold_price, '.2f')} {currency}\n"
-                                       f"`Total: ${format(total, '.2f')} {currency}`")
+        embed = Embedder.embed(
+            title=f"Successfully Sold ${ticker}",
+            message=f"{ticker} x {amount} @{format(sold_price, '.2f')} {currency}\n"
+            f"`Total: ${format(total, '.2f')} {currency}`",
+        )
         await ctx.send(embed=embed)
 
     @sell.error
@@ -70,22 +81,22 @@ class Positions(commands.Cog):
         await ctx.send(embed=Embedder.error(msg))
 
     @commands.command()
-    async def portfolio(self, ctx, mobile: str = ""):
+    async def portfolio(self, ctx, mobile: str = "", main: str = "CAD"):
         if mobile and mobile not in ("m", "mobile"):
             raise discord.ext.commands.BadArgument
-        session = Session()
         user_id = ctx.author.id
         username = ctx.author.name
         mobile = bool(mobile)
-        portfolio_complete = get_portfolio(session=session, user_id=user_id, username=username, mobile=mobile)
-        if portfolio_complete and mobile:
-            await ctx.send(embed=portfolio_complete[0])
-            await ctx.send(embed=portfolio_complete[1])
-        else:
-            await ctx.send(f"""```{portfolio_complete[0]}```""")
-            await ctx.send(f"""```{portfolio_complete[1]}```""")
-        if not portfolio_complete:
-            await ctx.send(Embedder.error(""))
+        portfolio, currencies_summary, summary = get_portfolio(
+            user_id=user_id, username=username, mobile=mobile, main=main
+        )
+        if mobile:
+            await ctx.send(embed=portfolio)
+            await ctx.send(embed=currencies_summary)
+            return await ctx.send(embed=summary)
+        await ctx.send(f"```diff\n{portfolio}\n```")
+        await ctx.send(f"```{currencies_summary}```")
+        await ctx.send(f"```{summary}```")
 
     @portfolio.error
     async def portfolio_error(self, ctx, error: Exception):
@@ -93,6 +104,4 @@ class Positions(commands.Cog):
             msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
         elif isinstance(error, NoPositionsException):
             msg = "No position was found with the user!\nTry `!buy` command first to add positions."
-        else:
-            msg = uncaught(error)
-        await ctx.send(embed=Embedder.error(msg))
+        await ctx.send(embed=Embedder.error(error))
