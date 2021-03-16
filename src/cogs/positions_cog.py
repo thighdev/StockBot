@@ -26,7 +26,7 @@ class Positions(commands.Cog):
             embed = Embedder.embed(
                 title=f"Successfully bought {ticker}",
                 message=f"{ticker} x {amount} @{format(bought_price, '.2f')} {currency}\n"
-                f"`Total: ${format(total, '.2f')} {currency}`",
+                f"`Total: {format(total, '.2f')} {currency}`",
             )
         else:
             embed = Embedder.error("Something went wrong.")
@@ -47,18 +47,13 @@ class Positions(commands.Cog):
         user_id = str(ctx.message.author.id)
         username = ctx.message.author.name
         ticker = ticker.upper()
-        try:
-            sold_price, currency = sell_position(
-                user_id=user_id,
-                username=username,
-                symbol=ticker,
-                amount=amount,
-                price=price,
-            )
-        except NotAmerican:
-            return await ctx.send(
-                embed=Embedder.error("Currently USD and CAD stocks are supported")
-            )
+        sold_price, currency = sell_position(
+            user_id=user_id,
+            username=username,
+            symbol=ticker,
+            amount=amount,
+            price=price,
+        )
         total = sold_price * amount
         embed = Embedder.embed(
             title=f"Successfully Sold ${ticker}",
