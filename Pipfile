@@ -21,6 +21,8 @@ sentry-sdk = "*"
 pytest = "*"
 financelite = "*"
 dateparser = "*"
+matplotlib = "*"
+pytz = "*"
 
 [dev-packages]
 
