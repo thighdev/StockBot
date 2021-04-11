@@ -23,6 +23,7 @@ financelite = "*"
 dateparser = "*"
 matplotlib = "*"
 pytz = "*"
+mplfinance = "*"
 
 [dev-packages]
 
