@@ -1,9 +1,11 @@
 from src.util.Embedder import Embedder
+from src.util.DatetimeHandler import epoch_to_datetime_tz
 from src.positions import *
 from src.functions import *
 from financelite import *
 import pytz
 import dateparser
+import matplotlib.pyplot as plt
 
 
 class Information(commands.Cog):
@@ -127,7 +129,41 @@ class Information(commands.Cog):
             msg = error
         await ctx.send(embed=Embedder.error(msg))
 
+    @commands.command()
+    async def graph(self, ctx, ticker: str, range: str = "1d"):
+        stock = Stock(ticker)
+        if range in ["1d", "5d"]:
+            interval = "5m"
+        else:
+            interval = "1d"
+        chart = stock.get_chart(interval=interval, range=range)
+        result = chart.get("result").pop()
+        meta = result.get("meta")
+        symbol = meta.get("symbol")
+        currency = meta.get("currency")
+        timestamps = result.get("timestamp")
+        datetime_tz = epoch_to_datetime_tz(timestamps)
+        quote = result.get("indicators").get("quote").pop()
+        lowes = quote.get("low")
+        highs = quote.get("high")
+        closes = quote.get("close")
+        plt.figure()
+        plt.plot(datetime_tz, closes, label="close")
+        plt.plot(datetime_tz, lowes, label="low")
+        plt.plot(datetime_tz, highs, label="high")
+        plt.legend()
+        plt.xlabel("date")
+        plt.ylabel(f"$ Price in {currency}")
+        plt.title(
+            f"{symbol} Stock Price {datetime_tz[0].strftime('%Y-%m-%d')} - {datetime_tz[-1].strftime('%Y-%m-%d')}"
+        )
+        plt.savefig("src/mpl_output/test.png")
+        chart = discord.File("src/mpl_output/test.png", filename="test.png")
+        await ctx.send(file=chart)
 
+    @graph.error
+    async def graph_error(self, ctx, error: Exception):
+        await ctx.send(embed=Embedder.error(error))
 # TODO: this doesn't work for now
 # @bot.command(
 #     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
