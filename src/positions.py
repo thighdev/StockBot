@@ -242,7 +242,7 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                     "P/L (%)",
                     "Currency",
                 ],
-                disable_numparse=True
+                disable_numparse=True,
             )
             if not mobile
             else pf_list
@@ -262,7 +262,10 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                     ]
                 )
             currencies_summary = tabulate(
-                currencies_summary, headers=["Total in Currency", "Total Value", "P/L (%)"], stralign="left", numalign="left"
+                currencies_summary,
+                headers=["Total in Currency", "Total Value", "P/L (%)"],
+                stralign="left",
+                numalign="left",
             )
             summary = tabulate(
                 [
@@ -271,7 +274,9 @@ def get_portfolio(user_id: str, username: str, mobile: bool, main: str):
                         f"{two_decimal(total_pl)} ({two_decimal(total_pl_percent)}%)",
                     ]
                 ],
-                headers=[f"Total in {main}", f"Total P/L in {main} (%)"], stralign="left", numalign="left"
+                headers=[f"Total in {main}", f"Total P/L in {main} (%)"],
+                stralign="left",
+                numalign="left",
             )
         else:
             currencies_summary = discord.Embed(title="Total value in Currencies")
