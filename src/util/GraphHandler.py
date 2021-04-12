@@ -63,14 +63,15 @@ def process_chart_data(chart: dict) -> tuple:
     return symbol, currency, timezone_short, df
 
 
-def plot(chart: dict) -> bytes:
+def plot(chart: dict, line: bool = False) -> bytes:
     data = process_chart_data(chart)
     symbol, currency, tz, df = data
     index = df.index
+    plot_type = "candle" if not line else "line"
     fig, axes = mpf.plot(
         df,
-        type="candle",
-        mav=(12, 26),
+        type=plot_type,
+        mav=(50, 100, 200),
         volume=True,
         style=STYLE,
         title=f"\n{symbol} Stock Price from {index[0].strftime('%Y-%m-%d')} to {index[-1].strftime('%Y-%m-%d')} {tz}",
@@ -78,8 +79,8 @@ def plot(chart: dict) -> bytes:
         ylabel_lower="Volume",
         returnfig=True,
     )
-    legend = axes[0].legend(
-        ["12 Moving Average", "26 Moving Average"],
+    axes[0].legend(
+        ["50 MA", "100 MA", "200 MA"],
         loc="upper left",
         bbox_to_anchor=(1, 1),
     )

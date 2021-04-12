@@ -132,14 +132,18 @@ class Information(commands.Cog):
     @commands.command()
     async def graph(self, ctx, ticker: str, range: str = "1d"):
         stock = Stock(ticker)
+        line = False
         if range in ["1d", "5d"]:
             interval = "5m"
         elif range in ["1mo", "3mo"]:
             interval = "1h"
+        elif range in ["1y", "2y"]:
+            interval = "1d"
         else:
+            line = True
             interval = "1d"
         chart = stock.get_chart(interval=interval, range=range)
-        in_mem = io.BytesIO(plot(chart))
+        in_mem = io.BytesIO(plot(chart, line=line))
         chart = discord.File(in_mem, filename=f"{ticker.upper()}-{range}.png")
         in_mem.close()
         await ctx.send(file=chart)
