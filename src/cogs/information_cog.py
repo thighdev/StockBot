@@ -139,8 +139,9 @@ class Information(commands.Cog):
         else:
             interval = "1d"
         chart = stock.get_chart(interval=interval, range=range)
-        plot(chart)
-        chart = discord.File("src/mpl_output/test.png", filename="test.png")
+        in_mem = io.BytesIO(plot(chart))
+        chart = discord.File(in_mem, filename=f"{ticker.upper()}-{range}.png")
+        in_mem.close()
         await ctx.send(file=chart)
 
     @graph.error

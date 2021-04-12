@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 import mplfinance as mpf
 from datetime import datetime
@@ -43,6 +45,7 @@ def process_chart_data(chart: dict) -> tuple:
     result = chart.get("result").pop()
     meta = result.get("meta")
     tz = meta.get("exchangeTimezoneName")
+    timezone_short = meta.get("timezone")
     symbol = meta.get("symbol")
     currency = meta.get("currency")
     timestamps = result.get("timestamp")
@@ -57,12 +60,12 @@ def process_chart_data(chart: dict) -> tuple:
     df = pd.DataFrame(
         data, index=datetime_idx, columns=["Open", "Close", "High", "Low", "Volume"]
     )
-    return symbol, currency, df
+    return symbol, currency, timezone_short, df
 
 
-def plot(chart: dict):
+def plot(chart: dict) -> bytes:
     data = process_chart_data(chart)
-    symbol, currency, df = data
+    symbol, currency, tz, df = data
     index = df.index
     fig, axes = mpf.plot(
         df,
@@ -70,10 +73,21 @@ def plot(chart: dict):
         mav=(12, 26),
         volume=True,
         style=STYLE,
-        title=f"\n{symbol} Stock Price from {index[0].strftime('%Y-%m-%d')} to {index[-1].strftime('%Y-%m-%d')}",
+        title=f"\n{symbol} Stock Price from {index[0].strftime('%Y-%m-%d')} to {index[-1].strftime('%Y-%m-%d')} {tz}",
         ylabel=f"$ Price in {currency}",
         ylabel_lower="Volume",
         returnfig=True,
     )
-    axes[0].legend(["12 Moving Average", "26 Moving Average"])
-    fig.savefig("src/mpl_output/test.png")
+    legend = axes[0].legend(
+        ["12 Moving Average", "26 Moving Average"],
+        loc="upper left",
+        bbox_to_anchor=(1, 1),
+    )
+    buffer = io.BytesIO()
+    fig.savefig(
+        buffer, format="png", bbox_inches="tight", dpi=200
+    )
+    buffer.seek(0)
+    img_in_bytes = buffer.read()
+    buffer.close()
+    return img_in_bytes
