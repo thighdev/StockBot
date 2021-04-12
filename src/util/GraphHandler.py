@@ -84,9 +84,7 @@ def plot(chart: dict) -> bytes:
         bbox_to_anchor=(1, 1),
     )
     buffer = io.BytesIO()
-    fig.savefig(
-        buffer, format="png", bbox_inches="tight", dpi=200
-    )
+    fig.savefig(buffer, format="png", bbox_inches="tight", dpi=200)
     buffer.seek(0)
     img_in_bytes = buffer.read()
     buffer.close()
