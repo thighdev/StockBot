@@ -1,0 +1,7 @@
+[Unit]
+Description="StonkzBot Dev"
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/python /apps/stockbot/stockbot.py
+Restart=on-failure
