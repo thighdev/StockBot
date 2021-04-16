@@ -76,6 +76,8 @@ class Positions(commands.Cog):
     async def sell_error(self, ctx, error: Exception):
         if isinstance(error, commands.BadArgument):
             msg = "Bad argument;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)]`"
+        elif isinstance(error, commands.MissingRequiredArgument):
+            msg = "Missing arguments;\n`!sell [ticker (KBO)] [amount (13)] [price (12.50)(optional)]`"
         elif isinstance(error, commands.CommandInvokeError):
             if isinstance(error.original, NotEnoughPositionsToSell):
                 msg = "You don't have enough positions to sell!"
@@ -86,22 +88,20 @@ class Positions(commands.Cog):
         await ctx.send(embed=Embedder.error(msg))
 
     @commands.command()
-    async def portfolio(self, ctx, mobile: str = "", main: str = "CAD"):
+    async def portfolio(self, ctx, mobile: str = ""):
         if mobile and mobile not in ("m", "mobile"):
             raise discord.ext.commands.BadArgument
         user_id = ctx.author.id
         username = ctx.author.name
         mobile = bool(mobile)
-        portfolio, currencies_summary, summary = get_portfolio(
-            user_id=user_id, username=username, mobile=mobile, main=main
+        portfolio, summary = get_portfolio(
+            user_id=user_id, username=username, mobile=mobile
         )
         if mobile:
             await ctx.send(embed=portfolio)
-            await ctx.send(embed=currencies_summary)
             return await ctx.send(embed=summary)
         await ctx.send(f"```diff\n{portfolio}\n```")
-        await ctx.send(f"```{currencies_summary}```")
-        await ctx.send(f"```{summary}```")
+        await ctx.send(f"```diff\n{summary}\n```")
 
     @portfolio.error
     async def portfolio_error(self, ctx, error: Exception):
@@ -109,4 +109,6 @@ class Positions(commands.Cog):
             msg = "Bad argument;\n`!portfolio [m or mobile (for mobile view)]`"
         elif isinstance(error, NoPositionsException):
             msg = "No position was found with the user!\nTry `!buy` command first to add positions."
-        await ctx.send(embed=Embedder.error(error))
+        else:
+            msg = uncaught(error)
+        await ctx.send(embed=Embedder.error(msg))

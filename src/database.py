@@ -6,6 +6,7 @@ from sqlalchemy import (
     Text,
     Float,
     BigInteger,
+    Boolean
 )
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import ClauseElement
@@ -27,7 +28,6 @@ class Symbols(Base):
 
     symbol_id = Column(Integer(), primary_key=True)
     symbol = Column(Text())
-    currency = Column(Text())
 
 
 class Positions(Base):
@@ -39,6 +39,7 @@ class Positions(Base):
     total_price = Column(Float())
     average_price = Column(Float())
     amount = Column(Integer())
+    is_usd = Column(Boolean())
 
 
 def connect(url):
