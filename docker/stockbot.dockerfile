@@ -8,6 +8,4 @@ RUN mkdir /apps/stockbot
 COPY . /apps/stockbot
 RUN pip install -r /apps/stockbot/requirements.txt
 WORKDIR /apps/stockbot
-COPY /apps/stockbot/stonkzbot_dev.service /etc/systemd/system/stonkzbot_dev.service
-RUN systemctl enable stonkzbot_dev.service
-RUN systemctl start stonkzbot_dev.service
+ENTRYPOINT ["python","/apps/stockbot/stockbot.py"]
