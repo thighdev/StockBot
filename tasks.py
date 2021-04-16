@@ -37,8 +37,6 @@ def dev(c, verbose=False):
     else:
         compose(c, "up -d")
     print("Containers are now up.")
-    print("Running bot ...")
-    runbot(c)
 
 
 @invoke.task
