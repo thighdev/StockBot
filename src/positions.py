@@ -206,7 +206,11 @@ def get_portfolio(user_id: str, username: str, mobile: bool):
         if not positions:
             raise NoPositionsException
         pf_list = (
-            list() if not mobile else discord.Embed(title=f"{username}'s Portfolio")
+            list()
+            if not mobile
+            else discord.Embed(
+                title=f"{username}'s Portfolio", colour=discord.Colour.green()
+            )
         )
         currency_wallet = CurrencyWallet()
         for item in positions:
@@ -276,7 +280,9 @@ def get_portfolio(user_id: str, username: str, mobile: bool):
         )
         wallet_summary = currency_wallet.summary()
         if mobile:
-            summary = discord.Embed(title=f"{username}'s Portfolio Summary")
+            summary = discord.Embed(
+                title=f"{username}'s Portfolio Summary", colour=discord.Colour.green()
+            )
             summary_handler(wallet_summary, summary)
         else:
             summary = []

@@ -1,13 +1,5 @@
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import (
-    Column,
-    Integer,
-    create_engine,
-    Text,
-    Float,
-    BigInteger,
-    Boolean
-)
+from sqlalchemy import Column, Integer, create_engine, Text, Float, BigInteger, Boolean
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql.expression import ClauseElement
 
