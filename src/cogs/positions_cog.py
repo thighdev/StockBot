@@ -102,7 +102,10 @@ class Positions(commands.Cog):
             await ctx.send(embed=portfolio)
             return await ctx.send(embed=summary)
         if len_pf > 1:
-            message = await ctx.send(f"```diff\n{portfolio[0]}\n```" + f"`Page: 1/{len_pf} (10 positions per page)`")
+            message = await ctx.send(
+                f"```diff\n{portfolio[0]}\n```"
+                + f"`Page: 1/{len_pf} (10 positions per page)`"
+            )
             await ctx.send(f"```diff\n{summary}\n```")
             await message.add_reaction("⏮")
             await message.add_reaction("◀")
@@ -122,18 +125,30 @@ class Positions(commands.Cog):
             while True:
                 if str(reaction) == "⏮":
                     i = 0
-                    await message.edit(content=f"```diff\n{portfolio[i]}\n```" + f"`{info_format(i + 1)}`")
+                    await message.edit(
+                        content=f"```diff\n{portfolio[i]}\n```"
+                        + f"`{info_format(i + 1)}`"
+                    )
                 elif str(reaction) == "◀":
                     if i > 0:
                         i -= 1
-                        await message.edit(content=f"```diff\n{portfolio[i]}\n```" + f"`{info_format(i + 1)}`")
+                        await message.edit(
+                            content=f"```diff\n{portfolio[i]}\n```"
+                            + f"`{info_format(i + 1)}`"
+                        )
                 elif str(reaction) == "▶":
                     if i < len_pf - 1:
                         i += 1
-                        await message.edit(content=f"```diff\n{portfolio[i]}\n```" + f"`{info_format(i + 1)}`")
+                        await message.edit(
+                            content=f"```diff\n{portfolio[i]}\n```"
+                            + f"`{info_format(i + 1)}`"
+                        )
                 elif str(reaction) == "⏭":
                     i = -1
-                    await message.edit(content=f"```diff\n{portfolio[i]}\n```" + f"`{info_format(len_pf)}`")
+                    await message.edit(
+                        content=f"```diff\n{portfolio[i]}\n```"
+                        + f"`{info_format(len_pf)}`"
+                    )
                 elif str(reaction) == "❌":
                     return await message.clear_reactions()
                 try:
