@@ -123,7 +123,7 @@ class Positions(commands.Cog):
                         i -= 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
                 elif str(reaction) == '▶':
-                    if i < len(portfolio):
+                    if i < len(portfolio) - 1:
                         i += 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
                 elif str(reaction) == '⏭':
