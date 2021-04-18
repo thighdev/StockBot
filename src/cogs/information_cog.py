@@ -134,10 +134,8 @@ class Information(commands.Cog):
         stock = Stock(ticker)
         if range in ["1d", "5d"]:
             interval = "5m"
-        elif range in ["1mo", "3mo"]:
+        elif range in ["1mo", "3mo", "6mo"]:
             interval = "1h"
-        elif range in ["1y", "5y", "10y", "ytd", "max"]:
-            interval = "1d"
         else:
             interval = "1d"
         chart = stock.get_chart(interval=interval, range=range)
