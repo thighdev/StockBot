@@ -129,6 +129,8 @@ class Positions(commands.Cog):
                 elif str(reaction) == '⏭':
                     i = -1
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                elif str(reaction) == '❌':
+                    return await message.clear_reactions()
                 try:
                     reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
                     await message.remove_reaction(reaction, user)
