@@ -63,11 +63,11 @@ def process_chart_data(chart: dict) -> tuple:
     return symbol, currency, timezone_short, df
 
 
-def plot(chart: dict, line: bool = False) -> bytes:
+def plot(chart: dict) -> bytes:
     data = process_chart_data(chart)
     symbol, currency, tz, df = data
     index = df.index
-    plot_type = "candle" if not line else "line"
+    plot_type = "candle"
     fig, axes = mpf.plot(
         df,
         type=plot_type,
