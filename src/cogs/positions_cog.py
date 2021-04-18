@@ -107,6 +107,7 @@ class Positions(commands.Cog):
             await message.add_reaction('◀')
             await message.add_reaction('▶')
             await message.add_reaction('⏭')
+            await message.add_reaction('❌')
 
             def check(reaction, user):
                 return user == ctx.author
