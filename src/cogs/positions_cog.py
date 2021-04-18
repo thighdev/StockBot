@@ -97,20 +97,25 @@ class Positions(commands.Cog):
         portfolio, summary = get_portfolio(
             user_id=user_id, username=username, mobile=mobile
         )
+        len_pf = len(portfolio)
         if mobile:
             await ctx.send(embed=portfolio)
             return await ctx.send(embed=summary)
-        if len(portfolio) > 1:
+        if len_pf > 1:
             message = await ctx.send(f"```diff\n{portfolio[0]}\n```")
+            info_message = await ctx.send(f"`Page: 1/{len_pf}`")
             await ctx.send(f"```diff\n{summary}\n```")
-            await message.add_reaction("⏮")
-            await message.add_reaction("◀")
-            await message.add_reaction("▶")
-            await message.add_reaction("⏭")
-            await message.add_reaction("❌")
+            await info_message.add_reaction("⏮")
+            await info_message.add_reaction("◀")
+            await info_message.add_reaction("▶")
+            await info_message.add_reaction("⏭")
+            await info_message.add_reaction("❌")
 
             def check(reaction, user):
                 return user == ctx.author
+
+            def info_format(current):
+                return f"`Page: {current}/{len_pf} (10 positions per page)"
 
             i = 0
             reaction = None
@@ -119,27 +124,31 @@ class Positions(commands.Cog):
                 if str(reaction) == "⏮":
                     i = 0
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                    await info_message.edit(content=info_format(i))
                 elif str(reaction) == "◀":
                     if i > 0:
                         i -= 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                        await info_message.edit(content=info_format(i))
                 elif str(reaction) == "▶":
-                    if i < len(portfolio) - 1:
+                    if i < len_pf - 1:
                         i += 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                        await info_message.edit(content=info_format(i))
                 elif str(reaction) == "⏭":
                     i = -1
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                    await info_message.edit(content=info_format(len_pf))
                 elif str(reaction) == "❌":
-                    return await message.clear_reactions()
+                    return await info_message.clear_reactions()
                 try:
                     reaction, user = await self.bot.wait_for(
                         "reaction_add", timeout=30.0, check=check
                     )
-                    await message.remove_reaction(reaction, user)
+                    await info_message.remove_reaction(reaction, user)
                 except Exception:
                     break
-            await message.clear_reactions()
+            await info_message.delete()
         else:
             await ctx.send(f"```diff\n{portfolio[0]}\n```")
             await ctx.send(f"```diff\n{summary}\n```")
