@@ -136,8 +136,10 @@ class Information(commands.Cog):
             interval = "5m"
         elif range in ["1mo", "3mo", "6mo"]:
             interval = "1h"
-        else:
+        elif range in ["1y", "2y", "ytd"]:
             interval = "1d"
+        else:
+            interval = "1wk"
         chart = stock.get_chart(interval=interval, range=range)
         in_mem = io.BytesIO(plot(chart))
         chart = discord.File(in_mem, filename=f"{ticker.upper()}-{range}.png")
