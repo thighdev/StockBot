@@ -136,7 +136,7 @@ class Information(commands.Cog):
             interval = "5m"
         elif range in ["1mo", "3mo"]:
             interval = "1h"
-        elif range in ["1y", "2y"]:
+        elif range in ["1y", "5y", "10y", "ytd", "max"]:
             interval = "1d"
         else:
             interval = "1d"
