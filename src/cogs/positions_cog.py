@@ -115,7 +115,7 @@ class Positions(commands.Cog):
                 return user == ctx.author
 
             def info_format(current):
-                return f"`Page: {current}/{len_pf} (10 positions per page)"
+                return f"`Page: {current}/{len_pf} (10 positions per page)`"
 
             i = 0
             reaction = None
@@ -124,17 +124,17 @@ class Positions(commands.Cog):
                 if str(reaction) == "⏮":
                     i = 0
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                    await info_message.edit(content=info_format(i))
+                    await info_message.edit(content=info_format(i + 1))
                 elif str(reaction) == "◀":
                     if i > 0:
                         i -= 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                        await info_message.edit(content=info_format(i))
+                        await info_message.edit(content=info_format(i + 1))
                 elif str(reaction) == "▶":
                     if i < len_pf - 1:
                         i += 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                        await info_message.edit(content=info_format(i))
+                        await info_message.edit(content=info_format(i + 1))
                 elif str(reaction) == "⏭":
                     i = -1
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
