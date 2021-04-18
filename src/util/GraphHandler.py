@@ -84,6 +84,36 @@ def plot(chart: dict) -> bytes:
         loc="upper left",
         bbox_to_anchor=(1, 1),
     )
+    close = df["Close"]
+    max_idx, min_idx = close.idxmax(), close.idxmin()
+    max_val, min_val = df.at[max_idx, "Close"], df.at[min_idx, "Close"]
+    max_idx = df.index.get_loc(max_idx)
+    min_idx = df.index.get_loc(min_idx)
+    recent_idx = df.index[-1]
+    recent_val = df.at[recent_idx, "Close"]
+    recent_idx = df.index.get_loc(recent_idx)
+    axes[0].annotate(
+        f"Local Min @ {format(min_val, '.2f')}",
+        xy=(min_idx, min_val),
+        xytext=(min_idx, min_val - 20),
+        textcoords="offset pixels",
+        arrowprops=dict(arrowstyle="->"),
+    )
+    axes[0].annotate(
+        f"Local Max @ {format(max_val, '.2f')}",
+        xy=(max_idx, max_val),
+        xytext=(min_idx, max_val + 10),
+        textcoords="offset pixels",
+        arrowprops=dict(arrowstyle="->"),
+    )
+    axes[0].annotate(
+        f"Recent Close @ {format(recent_val, '.2f')}",
+        xy=(recent_idx, recent_val),
+        xytext=(recent_idx, recent_val),
+        textcoords="offset pixels",
+        arrowprops=dict(arrowstyle="->"),
+    )
+
     buffer = io.BytesIO()
     fig.savefig(buffer, format="png", bbox_inches="tight", dpi=200)
     buffer.seek(0)
