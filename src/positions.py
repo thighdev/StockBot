@@ -1,6 +1,6 @@
 import src.database as db
 import discord
-from financelite import Stock
+from financelite import Stock, Group
 from src.database import Session
 from discord.ext import commands
 from tabulate import tabulate
@@ -20,13 +20,16 @@ class NotAmerican(Exception):
     pass
 
 
+class WalletHasNoBookValues(BaseException):
+    pass
+
+
 def buy_position(user_id: str, username: str, symbol: str, amount: int, price: float):
     session = Session()
     bought_price, currency = Stock(ticker=symbol).get_live()
     if currency not in ["USD", "CAD"]:
         raise NotAmerican
     bought_price = price if price else bought_price
-    is_usd = True if currency == "USD" else False
     try:
         symbol = get_symbol_or_create(session, symbol)
         symbol_id = symbol[0].symbol_id
@@ -52,7 +55,6 @@ def buy_position(user_id: str, username: str, symbol: str, amount: int, price: f
                 total_price=new_total_price,
                 average_price=new_average_price,
                 amount=new_amount,
-                is_usd=is_usd,
             )
             session.add(position_row)
         return bought_price, currency
@@ -116,17 +118,13 @@ def summary_handler(summary: dict, format_type: Union[discord.Embed, List]):
 
         if isinstance(format_type, discord.Embed):
             format_type.add_field(
-                name=f"Summary in {key}",
+                name=f"Summary {key}",
                 value=f"> Book Value: {book_value}\n"
                 f"> Current Total: {live}\n"
                 f"> P/L(%): {pl_string}",
             )
         else:
             format_type.append([prefix + key, book_value, live, pl_string])
-
-
-class WalletHasNoBookValues(BaseException):
-    pass
 
 
 class CurrencyWallet:
@@ -197,6 +195,64 @@ class CurrencyWallet:
         return summary
 
 
+def handle_positions(
+    pos_group: Group,
+    pos_dict: dict,
+    currency_wallet: CurrencyWallet,
+    format_type: Union[discord.Embed, List],
+):
+    live_info = pos_group.get_quotes(
+        cherrypicks=["symbol", "regularMarketPrice", "currency"]
+    )
+
+    for info in live_info:
+        symbol = info.get("symbol")
+        live = info.get("regularMarketPrice")
+        amount = pos_dict.get(symbol).get("amount")
+        book_value = pos_dict.get(symbol).get("book_value")
+        average = pos_dict.get(symbol).get("average")
+        currency = info.get("currency")
+        live_total = live * amount
+        pl, pl_percent = calculate_pl(live=live_total, book_value=book_value)
+        pl = two_decimal(pl)
+        pl_percent = two_decimal(pl_percent)
+        currency_wallet.add_currency(
+            currency=currency, book_value=book_value, live=live_total
+        )
+        if live > average:
+            symbol = "+" + symbol
+            pl = "+" + pl
+            pl_percent = f"+{pl_percent}"
+        elif average > live:
+            symbol = "-" + symbol
+        else:
+            pass
+        if isinstance(format_type, discord.Embed):
+            format_type.add_field(
+                name=f"**{symbol}**",
+                value=f"> Amount: x {amount}\n"
+                f"> Average Price: {two_decimal(average)}\n"
+                f"> Live Price: {two_decimal(live)}\n"
+                f"> Book Value: {two_decimal(book_value)}\n"
+                f"> Current Total: {two_decimal(live_total)}\n"
+                f"> P/L (%): {pl} ({pl_percent}%)\n"
+                f"> Currency: {currency}",
+            )
+        else:
+            format_type.append(
+                [
+                    symbol,
+                    f"x {amount}",
+                    two_decimal(average),
+                    two_decimal(live),
+                    two_decimal(book_value),
+                    two_decimal(live_total),
+                    f"{pl} ({pl_percent}%)",
+                    currency,
+                ]
+            )
+
+
 def get_portfolio(user_id: str, username: str, mobile: bool):
     session = Session()
     try:
@@ -213,53 +269,29 @@ def get_portfolio(user_id: str, username: str, mobile: bool):
             )
         )
         currency_wallet = CurrencyWallet()
+        pos_group = Group()
+        pos_dict = dict()
+
         for item in positions:
-            symbol = session.query(db.Symbols).filter_by(symbol_id=item.symbol_id).one()
-            currency = "USD" if item.is_usd else "CAD"
-            symbol = symbol.symbol
-            live = Stock(symbol).get_live()[0]
-            book_value = item.total_price
-            average = item.average_price
-            amount = item.amount
-            live_total = live * amount
-            pl, pl_percent = calculate_pl(live=live_total, book_value=book_value)
-            pl = two_decimal(pl)
-            pl_percent = two_decimal(pl_percent)
-            currency_wallet.add_currency(
-                currency=currency, book_value=book_value, live=live_total
+            symbol = (
+                session.query(db.Symbols)
+                .filter_by(symbol_id=item.symbol_id)
+                .one()
+                .symbol
             )
-            if live > average:
-                symbol = "+" + symbol
-                pl = "+" + pl
-                pl_percent = f"+{pl_percent}"
-            elif average > live:
-                symbol = "-" + symbol
-            else:
-                pass
-            if mobile:
-                pf_list.add_field(
-                    name=f"**{symbol}**",
-                    value=f"> Amount: x {amount}\n"
-                    f"> Average Price: {two_decimal(average)}\n"
-                    f"> Live Price: {two_decimal(live)}\n"
-                    f"> Book Value: {two_decimal(book_value)}\n"
-                    f"> Current Total: {two_decimal(live_total)}\n"
-                    f"> P/L (%): {pl} ({pl_percent}%)\n"
-                    f"> Currency: {currency}",
-                )
-            else:
-                pf_list.append(
-                    [
-                        symbol,
-                        f"x {amount}",
-                        two_decimal(average),
-                        two_decimal(live),
-                        two_decimal(book_value),
-                        two_decimal(live_total),
-                        f"{pl} ({pl_percent}%)",
-                        currency,
-                    ]
-                )
+            pos_group.add_ticker(symbol)
+            pos_dict[symbol] = dict(
+                book_value=item.total_price,
+                average=item.average_price,
+                amount=item.amount,
+            )
+
+        handle_positions(
+            pos_group=pos_group,
+            pos_dict=pos_dict,
+            currency_wallet=currency_wallet,
+            format_type=pf_list,
+        )
         portfolio_table = (
             tabulate(
                 pf_list,

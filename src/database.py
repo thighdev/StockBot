@@ -31,7 +31,6 @@ class Positions(Base):
     total_price = Column(Float())
     average_price = Column(Float())
     amount = Column(Integer())
-    is_usd = Column(Boolean())
 
 
 def connect(url):
