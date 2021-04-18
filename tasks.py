@@ -32,10 +32,9 @@ def dev(c, verbose=False):
     """
     One-button solution for getting the containers up and run the bot
     """
+    compose(c, "up -d")
     if verbose:
-        compose(c, "up")
-    else:
-        compose(c, "up -d")
+        compose(c, "logs -f")
     print("Containers are now up.")
 
 
