@@ -33,9 +33,7 @@ async def on_command_error(ctx, error: Exception):
 async def on_ready():
     sentry_sdk.init(SENTRY_DSN, traces_sample_rate=1.0)
     connect(DATABASE_URL)
-    await bot.change_presence(
-        activity=discord.Game(f"{prefix}help")
-        )
+    await bot.change_presence(activity=discord.Game(f"{prefix}help"))
     print("We are online!")
     print("Name: {}".format(bot.user.name))
     print("ID: {}".format(bot.user.id))
