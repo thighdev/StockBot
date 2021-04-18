@@ -292,24 +292,38 @@ def get_portfolio(user_id: str, username: str, mobile: bool):
             currency_wallet=currency_wallet,
             format_type=pf_list,
         )
-        portfolio_table = (
-            tabulate(
-                pf_list,
-                headers=[
-                    "Symbol",
-                    "Amount",
-                    "Average Price",
-                    "Live Price",
-                    "Book Value",
-                    "Current Total",
-                    "P/L (%)",
-                    "Currency",
-                ],
-                disable_numparse=True,
-            )
-            if not mobile
-            else pf_list
-        )
+        if mobile:
+            portfolio_table = pf_list
+        else:
+            headers = [
+                "Symbol",
+                "Amount",
+                "Average Price",
+                "Live Price",
+                "Book Value",
+                "Current Total",
+                "P/L (%)",
+                "Currency",
+            ]
+            pf_len = len(pf_list)
+            if pf_len > 10:
+                chunking = pf_len // 10
+                if pf_len % 10:
+                    chunking += 1
+            else:
+                chunking = 1
+            portfolio_table = []
+            for _ in range(chunking):
+                chunk = pf_list[:10]
+                portfolio_table.append(
+                    tabulate(
+                        chunk,
+                        headers=headers,
+                        disable_numparse=True,
+                    )
+                )
+                del pf_list[:10]
+
         wallet_summary = currency_wallet.summary()
         if mobile:
             summary = discord.Embed(
@@ -357,19 +371,5 @@ def get_existing_position(session, user_id, symbol_id: int):
     return existing
 
 
-def convert(initial, final, amount):
-    return CurrencyRates().convert(base_cur=initial, dest_cur=final, amount=amount)
-
-
-def neg_zero_handler(neg_zero):
-    return "0.00" if neg_zero == "-0.00" else neg_zero
-
-
 def two_decimal(number: float):
     return format(number, ".2f")
-
-
-def get_total_usd_cad(usd, cad):
-    total_in_usd = usd + convert("CAD", "USD", cad)
-    total_in_cad = cad + convert("USD", "CAD", usd)
-    return total_in_usd, total_in_cad

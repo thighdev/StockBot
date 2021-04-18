@@ -100,8 +100,45 @@ class Positions(commands.Cog):
         if mobile:
             await ctx.send(embed=portfolio)
             return await ctx.send(embed=summary)
-        await ctx.send(f"```diff\n{portfolio}\n```")
-        await ctx.send(f"```diff\n{summary}\n```")
+        if len(portfolio) > 1:
+            message = await ctx.send(f"```diff\n{portfolio[0]}\n```")
+            await ctx.send(f"```diff\n{summary}\n```")
+            await message.add_reaction('⏮')
+            await message.add_reaction('◀')
+            await message.add_reaction('▶')
+            await message.add_reaction('⏭')
+
+            def check(reaction, user):
+                return user == ctx.author
+
+            i = 0
+            reaction = None
+
+            while True:
+                if str(reaction) == '⏮':
+                    i = 0
+                    await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                elif str(reaction) == '◀':
+                    if i > 0:
+                        i -= 1
+                        await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                elif str(reaction) == '▶':
+                    if i < 2:
+                        i += 1
+                        await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                elif str(reaction) == '⏭':
+                    i = -1
+                    await message.edit(content=f"```diff\n{portfolio[i]}\n```")
+                try:
+                    reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
+                    await message.remove_reaction(reaction, user)
+                except Exception:
+                    break
+            await message.clear_reactions()
+        else:
+            await ctx.send(f"```diff\n{portfolio[0]}\n```")
+            await ctx.send(f"```diff\n{summary}\n```")
+
 
     @portfolio.error
     async def portfolio_error(self, ctx, error: Exception):
