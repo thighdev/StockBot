@@ -95,21 +95,21 @@ def plot(chart: dict) -> bytes:
     axes[0].annotate(
         f"Local Min @ {format(min_val, '.2f')}",
         xy=(min_idx, min_val),
-        xytext=(min_idx, min_val - 20),
+        xytext=(10, 10),
         textcoords="offset pixels",
         arrowprops=dict(arrowstyle="->"),
     )
     axes[0].annotate(
         f"Local Max @ {format(max_val, '.2f')}",
         xy=(max_idx, max_val),
-        xytext=(min_idx, max_val + 10),
+        xytext=(10, 10),
         textcoords="offset pixels",
         arrowprops=dict(arrowstyle="->"),
     )
     axes[0].annotate(
         f"Recent Close @ {format(recent_val, '.2f')}",
         xy=(recent_idx, recent_val),
-        xytext=(recent_idx, recent_val),
+        xytext=(10, 10),
         textcoords="offset pixels",
         arrowprops=dict(arrowstyle="->"),
     )
