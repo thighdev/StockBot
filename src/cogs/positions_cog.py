@@ -103,11 +103,11 @@ class Positions(commands.Cog):
         if len(portfolio) > 1:
             message = await ctx.send(f"```diff\n{portfolio[0]}\n```")
             await ctx.send(f"```diff\n{summary}\n```")
-            await message.add_reaction('⏮')
-            await message.add_reaction('◀')
-            await message.add_reaction('▶')
-            await message.add_reaction('⏭')
-            await message.add_reaction('❌')
+            await message.add_reaction("⏮")
+            await message.add_reaction("◀")
+            await message.add_reaction("▶")
+            await message.add_reaction("⏭")
+            await message.add_reaction("❌")
 
             def check(reaction, user):
                 return user == ctx.author
@@ -116,24 +116,26 @@ class Positions(commands.Cog):
             reaction = None
 
             while True:
-                if str(reaction) == '⏮':
+                if str(reaction) == "⏮":
                     i = 0
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                elif str(reaction) == '◀':
+                elif str(reaction) == "◀":
                     if i > 0:
                         i -= 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                elif str(reaction) == '▶':
+                elif str(reaction) == "▶":
                     if i < len(portfolio) - 1:
                         i += 1
                         await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                elif str(reaction) == '⏭':
+                elif str(reaction) == "⏭":
                     i = -1
                     await message.edit(content=f"```diff\n{portfolio[i]}\n```")
-                elif str(reaction) == '❌':
+                elif str(reaction) == "❌":
                     return await message.clear_reactions()
                 try:
-                    reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
+                    reaction, user = await self.bot.wait_for(
+                        "reaction_add", timeout=30.0, check=check
+                    )
                     await message.remove_reaction(reaction, user)
                 except Exception:
                     break
@@ -141,7 +143,6 @@ class Positions(commands.Cog):
         else:
             await ctx.send(f"```diff\n{portfolio[0]}\n```")
             await ctx.send(f"```diff\n{summary}\n```")
-
 
     @portfolio.error
     async def portfolio_error(self, ctx, error: Exception):
