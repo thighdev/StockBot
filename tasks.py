@@ -39,6 +39,12 @@ def dev(c, verbose=False):
 
 
 @invoke.task
+def restart(c, verbose=False):
+    compose(c, "stop")
+    dev(c, verbose=verbose)
+
+
+@invoke.task
 def requirements(c):
     """
     Exports your pipenv environment to requirements.txt
