@@ -103,7 +103,7 @@ class Positions(commands.Cog):
             return await ctx.send(embed=summary)
         if len_pf > 1:
             message = await ctx.send(f"```diff\n{portfolio[0]}\n```")
-            info_message = await ctx.send(f"`Page: 1/{len_pf}`")
+            info_message = await ctx.send(f"`Page: 1/{len_pf} (10 positions per page)`")
             await ctx.send(f"```diff\n{summary}\n```")
             await info_message.add_reaction("⏮")
             await info_message.add_reaction("◀")
