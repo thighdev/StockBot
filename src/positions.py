@@ -114,7 +114,9 @@ def summary_handler(summary: dict, format_type: Union[discord.Embed, List]):
             prefix = "-"
         else:
             prefix = ""
-        pl_string = f"{prefix + two_decimal(pl)}({prefix + two_decimal(abs(pl_percent))}%)"
+        pl_string = (
+            f"{prefix + two_decimal(abs(pl))}({prefix + two_decimal(abs(pl_percent))}%)"
+        )
 
         if isinstance(format_type, discord.Embed):
             format_type.add_field(
