@@ -170,3 +170,14 @@ class Information(commands.Cog):
         chart = discord.File(in_mem, filename=f"{ticker.upper()}-{data_range}.png")
         in_mem.close()
         await ctx.send(file=chart)
+
+    @graph.error
+    async def graph_error(self, ctx, error: Exception):
+        if isinstance(error, commands.MissingRequiredArgument):
+            return await ctx.send(
+                embed=Embedder.error(
+                    "`!graph ticker data_range`\n"
+                    "Data ranges: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, ytd, max]"
+                )
+            )
+        await ctx.send(embed=Embedder.error(uncaught(error)))
