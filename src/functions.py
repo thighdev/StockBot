@@ -2,6 +2,9 @@ import os
 from typing import Union
 from dotenv import load_dotenv
 from yahoo_fin.stock_info import *
+from datetime import datetime
+from pytz import timezone
+from typing import List
 import discord
 
 load_dotenv()
@@ -95,3 +98,8 @@ def humanize_number(value: Union[int, float], fraction_point: int = 1) -> str:
 def camel_to_title(text: str) -> str:
     formatted = re.sub("([a-z])([A-Z])", "\g<1> \g<2>", text).title()
     return formatted
+
+
+def epoch_to_datetime_tz(epoch_list: List[int], tz: str = "UTC"):
+    tz = timezone(tz)
+    return [datetime.fromtimestamp(i, tz) for i in epoch_list]

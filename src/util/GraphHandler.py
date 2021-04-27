@@ -2,9 +2,7 @@ import io
 
 import pandas as pd
 import mplfinance as mpf
-from datetime import datetime
-from pytz import timezone
-from typing import List
+from src.functions import epoch_to_datetime_tz
 
 STYLE = {
     "base_mpl_style": "fast",
@@ -34,11 +32,6 @@ STYLE = {
     },
     "base_mpf_style": "yahoo",
 }
-
-
-def epoch_to_datetime_tz(epoch_list: List[int], tz: str = "UTC"):
-    tz = timezone(tz)
-    return [datetime.fromtimestamp(i, tz) for i in epoch_list]
 
 
 def process_chart_data(chart: dict) -> tuple:
@@ -81,7 +74,7 @@ def plot(chart: dict) -> bytes:
     )
     axes[0].legend(
         ["50 MA", "100 MA", "200 MA"],
-        loc="upper left",
+        loc="lower left",
         bbox_to_anchor=(1, 1),
     )
     close = df["Close"]
@@ -95,7 +88,7 @@ def plot(chart: dict) -> bytes:
     axes[0].annotate(
         f"Local Min @ {format(min_val, '.2f')}",
         xy=(min_idx, min_val),
-        xytext=(50, 0),
+        xytext=(50, -50),
         textcoords="offset pixels",
         arrowprops=dict(arrowstyle="->"),
     )
@@ -109,7 +102,7 @@ def plot(chart: dict) -> bytes:
     axes[0].annotate(
         f"Recent Close @ {format(recent_val, '.2f')}",
         xy=(recent_idx, recent_val),
-        xytext=(50, 0),
+        xytext=(50, 50),
         textcoords="offset pixels",
         arrowprops=dict(arrowstyle="->"),
     )
