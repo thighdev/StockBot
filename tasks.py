@@ -1,6 +1,9 @@
 import invoke
 
-@invoke.task(help={"arg": "(Takes docker-compose arguments. Use quotes for multiple arguments.)"})
+
+@invoke.task(
+    help={"arg": "(Takes docker-compose arguments. Use quotes for multiple arguments.)"}
+)
 def compose(c, arg):
     """
     Acts as docker-compose
@@ -29,13 +32,16 @@ def dev(c, verbose=False):
     """
     One-button solution for getting the containers up and run the bot
     """
+    compose(c, "up -d")
     if verbose:
-        compose(c, "up")
-    else:
-        compose(c, "up -d")
+        compose(c, "logs -f")
     print("Containers are now up.")
-    print("Running bot ...")
-    runbot(c)
+
+
+@invoke.task
+def restart(c, verbose=False):
+    compose(c, "stop")
+    dev(c, verbose=verbose)
 
 
 @invoke.task
