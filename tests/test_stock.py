@@ -24,20 +24,3 @@ def test_get_live():
 
 def test_stock_str():
     assert str(stock) == "gme"
-
-
-def test_get_hist():
-    hist, currency = stock.get_hist(2)
-    assert len(hist) == 2
-    assert currency == "USD"
-    assert len(stock.get_hist(15)[0]) == 15
-    with pytest.raises(ValueError):
-        stock.get_hist(0)
-    with pytest.raises(ValueError):
-        stock.get_hist(-1)
-    with pytest.raises(ValueError):
-        stock.get_hist(0.0)
-    with pytest.raises(ValueError):
-        stock.get_hist(1.2)
-    with pytest.raises(ValueError):
-        stock.get_hist("foo")
