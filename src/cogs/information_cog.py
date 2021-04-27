@@ -1,11 +1,11 @@
 from src.util.Embedder import Embedder
+from src.util.SentryHelper import uncaught
 from src.util.GraphHandler import plot
 from src.positions import *
 from src.functions import *
 from financelite import *
 import pytz
 import dateparser
-import matplotlib.pyplot as plt
 
 
 class Information(commands.Cog):
@@ -100,81 +100,73 @@ class Information(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def hist(self, ctx, ticker: str, days: int):
+    async def hist(self, ctx, ticker: str, data_range: str):
         stock = Stock(ticker)
-        data, currency = stock.get_hist(days=days)
-        diff = data[-1] - data[0]
-        is_positive = ""
-        if diff < 0:
-            colour = discord.Colour.red()
-        else:
-            is_positive = "+"
-            colour = discord.Colour.green()
-        diff_percent = diff / data[0] * 100
-        embed = discord.Embed(
-            title=f"Historical change for {ticker.upper()} within {days} days",
-            description=f"{is_positive}{format(diff, '.2f')} {currency} "
-            f"({is_positive}{format(diff_percent, '.2f')}%)",
-            colour=colour,
-        )
-        await ctx.send(embed=embed)
+        try:
+            hist_dictionary = stock.get_hist(data_range=data_range)
+            hist_data, currency, start, end = hist_dictionary.values()
+            start, end = epoch_to_datetime_tz([start, end], tz="EST")
+            time_delta_days = (end - start).days
+            start = start.strftime("%a, %b %d, %Y")
+            end = end.strftime("%a, %b %d, %Y")
+            diff = hist_data[-1] - hist_data[0]
+            is_positive = ""
+            if diff < 0:
+                colour = discord.Colour.red()
+            else:
+                is_positive = "+"
+                colour = discord.Colour.green()
+            diff_percent = diff / hist_data[0] * 100
+            embed = discord.Embed(
+                title=f"{ticker.upper()} from {start} to {end}",
+                description=f"{is_positive}{format(diff, '.2f')} {currency} "
+                f"({is_positive}{format(diff_percent, '.2f')}%)\nFrom **{time_delta_days} days ago** to today.",
+                colour=colour,
+            )
+            await ctx.send(embed=embed)
+        except DataRequestException:
+            return await ctx.send(
+                embed=Embedder.error(
+                    "`!hist ticker data_range`\n"
+                    "Data ranges:\n"
+                    "13d = 13 **trading** days\n"
+                    "2wk = 2 **calendar** weeks\n"
+                    "5mo = 5 **calendar** months\n"
+                    "3y = 3 **calendar** years"
+                )
+            )
 
     @hist.error
     async def hist_error(self, ctx, error: Exception):
-        if isinstance(error, ValueError) or isinstance(error, commands.BadArgument):
-            msg = "Days should be an integer larger than 1"
-        elif isinstance(error, commands.MissingRequiredArgument):
-            msg = "`!hist [ticker (KBO)] [days (15)]`"
-        else:
-            msg = error
-        await ctx.send(embed=Embedder.error(msg))
+        if isinstance(error, commands.MissingRequiredArgument):
+            return await ctx.send(
+                embed=Embedder.error(
+                    "`!hist ticker data_range`\n"
+                    "Data ranges:\n"
+                    "13d = 13 **trading** days\n"
+                    "2wk = 2 **calendar** weeks\n"
+                    "5mo = 5 **calendar** months\n"
+                    "3y = 3 **calendar** years"
+                )
+            )
+        await ctx.send(embed=Embedder.error(uncaught(error)))
 
     @commands.command()
-    async def graph(self, ctx, ticker: str, range: str = "1d"):
+    async def graph(self, ctx, ticker: str, data_range: str = "1d"):
         stock = Stock(ticker)
-        if range in ["1d", "5d"]:
+        if data_range in ["1d", "5d"]:
             interval = "5m"
-        elif range in ["1mo", "3mo", "6mo"]:
+        elif data_range in ["1mo", "3mo", "6mo"]:
             interval = "1h"
-        elif range in ["1y", "2y", "ytd"]:
+        elif data_range in ["1y", "2y", "ytd"]:
             interval = "1d"
         else:
             interval = "1wk"
-        chart = stock.get_chart(interval=interval, range=range)
+        try:
+            chart = stock.get_chart(interval=interval, range=data_range)
+        except DataRequestException:
+            return await ctx.send(embed=Embedder.error("Invalid ticker"))
         in_mem = io.BytesIO(plot(chart))
-        chart = discord.File(in_mem, filename=f"{ticker.upper()}-{range}.png")
+        chart = discord.File(in_mem, filename=f"{ticker.upper()}-{data_range}.png")
         in_mem.close()
         await ctx.send(file=chart)
-
-    @graph.error
-    async def graph_error(self, ctx, error: Exception):
-        await ctx.send(embed=Embedder.error(error))
-
-
-# TODO: this doesn't work for now
-# @bot.command(
-#     help="Requires two arguments, ticker and price. Example !alert TSLA 800",
-#     brief="Directly messages the user when the price hits the threshold indicated so they can buy/sell."
-# )
-# async def alert(ctx, ticker, price):
-#     if float(live_stock_price(ticker) > float(price)):
-#         while True:
-#             print(live_stock_price(ticker))
-#             if float(live_stock_price(ticker)) <= float(price):
-#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-#                 break
-#             await asyncio.sleep(10)
-#     else:
-#         while True:
-#             if float(live_stock_price(ticker)) >= float(price):
-#                 await ctx.author.send("```" + str(ticker).upper() + " has hit your price point of $" + price + ".```")
-#                 break
-#             await asyncio.sleep(10)
-#
-# @alert.error # TODO: doesn't work for now
-# async def alert_error(ctx, error):
-#     if isinstance(error, commands.CommandError):
-#         msg = 'Came across an error while processing your request. Please check your ticker again.'
-#     else:
-#         msg = uncaught(error)
-#     await ctx.send(embed=Embedder.error(msg))
