@@ -4,8 +4,11 @@ from financelite import Stock, Group
 from src.database import Session
 from discord.ext import commands
 from tabulate import tabulate
-from forex_python.converter import CurrencyRates
+from currency_converter import CurrencyConverter
+from cached_property import cached_property_with_ttl
 from typing import List, Union
+
+CURRENCY_EXCHANGE_DB = "https://www.ecb.int/stats/eurofxref/eurofxref-hist.zip"
 
 
 class NotEnoughPositionsToSell(Exception):
@@ -136,6 +139,10 @@ class CurrencyWallet:
         self.cad_book_value = 0.0
         self.cad_live = 0.0
 
+    @cached_property_with_ttl(ttl=3600)
+    def _currency_converter(self):
+        return CurrencyConverter(CURRENCY_EXCHANGE_DB)
+
     def add_currency(self, currency: str, book_value: float, live: float):
         if currency == "USD":
             self.usd_book_value += book_value
@@ -144,9 +151,10 @@ class CurrencyWallet:
             self.cad_book_value += book_value
             self.cad_live += live
 
-    @staticmethod
-    def _forex(init: str, final: str, value: float):
-        return CurrencyRates().convert(base_cur=init, dest_cur=final, amount=value)
+    def _forex(self, init: str, final: str, value: float):
+        return self._currency_converter.convert(
+            amount=value, currency=init, new_currency=final
+        )
 
     def summary(self) -> dict:
         book_value_in_usd = self.usd_book_value + self._forex(
