@@ -16,7 +16,6 @@ requests-html = "*"
 sqlalchemy = "*"
 pymysql = "*"
 tabulate = "*"
-forex-python = "*"
 sentry-sdk = "*"
 pytest = "*"
 financelite = "*"
@@ -24,6 +23,8 @@ dateparser = "*"
 matplotlib = "*"
 pytz = "*"
 mplfinance = "*"
+currencyconverter = "*"
+cached-property = "*"
 
 [dev-packages]
 
